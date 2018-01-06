@@ -9,7 +9,7 @@
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Revit.IFC.Export</RootNamespace>
-    <AssemblyName>Revit.IFC.Export</AssemblyName>
+    <AssemblyName>BIMOne.Revit.IFC.Export</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>

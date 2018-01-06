@@ -6,7 +6,7 @@
     <ProjectGuid>{032EA4DC-181F-4453-9F93-E08DE1C07D95}</ProjectGuid>
     <ProjectTypeGuids>{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <RootNamespace>Revit.IFC.Common</RootNamespace>
-    <AssemblyName>Revit.IFC.Common</AssemblyName>
+    <AssemblyName>BIMOne.Revit.IFC.Common</AssemblyName>
     <OutputType>Library</OutputType>
     <MinFrameworkVersionRequired>3.0</MinFrameworkVersionRequired>
     <IsWebBootstrapper>false</IsWebBootstrapper>
