@@ -6,7 +6,7 @@
     <ProjectGuid>{BCE5141A-291B-4CD8-A69B-7B9345AA00E9}</ProjectGuid>
     <ProjectTypeGuids>{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <RootNamespace>Revit.IFC.Export</RootNamespace>
-    <AssemblyName>BIMOne.Revit.IFC.Export</AssemblyName>
+    <AssemblyName>BIMOne.Revit2016.IFC.Export</AssemblyName>
     <OutputType>Library</OutputType>
     <MinFrameworkVersionRequired>3.0</MinFrameworkVersionRequired>
     <IsWebBootstrapper>false</IsWebBootstrapper>
