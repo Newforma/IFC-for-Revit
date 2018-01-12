@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+    <metadata>
+        <id>BIMOne.Revit2018.IFC.Common</id>
+        <version>18.2.0</version>
+        <authors>BIM One Inc.</authors>
+        <description>IFC Import/Exporter for Revit.</description>
+    <dependencies>
+      <dependency id="BIMOne.Autodesk.Revit2018.RevitAPI" version="18.0.0.421" />
+      <dependency id="BIMOne.Autodesk.Revit2018.RevitAPIIFC" version="18.0.0.420" />
+      <dependency id="Newtonsoft.Json" version="4.5.1" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="bin\Release\*.dll" target="lib\net452" />
+  </files>
+</package>
