@@ -236,6 +236,10 @@ namespace Revit.IFC.Export.Utility
          }
 
          if (potentialSweepEndFaces.Count < 2)
+         {
+         }
+
+         if (potentialSweepEndFaces.Count < 2)
                 throw new InvalidOperationException("Can't find enough potential end faces.");
 
          int ii = 0;

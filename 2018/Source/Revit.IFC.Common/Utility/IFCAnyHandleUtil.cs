@@ -22,6 +22,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Autodesk.Revit.DB.IFC;
+using Autodesk.Revit.DB;
 using Revit.IFC.Common.Enums;
 
 namespace Revit.IFC.Common.Utility
@@ -207,7 +208,7 @@ namespace Revit.IFC.Common.Utility
          if (String.IsNullOrEmpty(name))
             throw new ArgumentException("The name is empty.", "name");
 
-         if (value != null)
+         if (!string.IsNullOrEmpty(value))
             handle.SetAttribute(name, IFCData.CreateString(value));
       }
 

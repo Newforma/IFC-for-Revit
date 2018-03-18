@@ -56,7 +56,7 @@ namespace Revit.IFC.Export.Exporter
         /// <summary>
         /// The handles that represent the base extrusions inside the final shape representation.
         /// </summary>
-        public IList<IFCAnyHandle> BaseExtrusions = null;
+        public IList<IFCAnyHandle> BaseRepresentationItems = null;
 
         /// <summary>
         /// A handle for the Footprint representation

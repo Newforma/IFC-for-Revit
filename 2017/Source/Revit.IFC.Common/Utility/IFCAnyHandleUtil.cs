@@ -22,6 +22,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Autodesk.Revit.DB.IFC;
+using Autodesk.Revit.DB;
 using Revit.IFC.Common.Enums;
 
 namespace Revit.IFC.Common.Utility
@@ -207,7 +208,7 @@ namespace Revit.IFC.Common.Utility
          if (String.IsNullOrEmpty(name))
             throw new ArgumentException("The name is empty.", "name");
 
-         if (value != null)
+         if (!string.IsNullOrEmpty(value))
             handle.SetAttribute(name, IFCData.CreateString(value));
       }
 
@@ -1697,6 +1698,27 @@ namespace Revit.IFC.Common.Utility
       }
 
       /// <summary>
+      /// Checks if the handle points to a valid IFC entity.  A handle could point to an invalid entity if it were deleted after being stored in a cache.
+      /// </summary>
+      /// <param name="handle">The handle.</param>
+      /// <returns>True if it is valid, false otherwise.</returns>
+      public static bool IsValidHandle(IFCAnyHandle handle)
+      {
+         if (IsNullOrHasNoValue(handle))
+            return false;
+
+         try
+         {
+            // If the TypeName command succeeds, it means we have a valid handle.
+            return (handle.TypeName != null);
+         }
+         catch
+         {
+            return false;
+         }
+      }
+
+      /// <summary>
       /// Checks if the handle is of a particular type.
       /// </summary>
       /// <param name="handle">The handle.</param>
@@ -1740,6 +1762,16 @@ namespace Revit.IFC.Common.Utility
             SetAttribute(project, "LongName", projectLongName);
             SetAttribute(project, "Phase", projectStatus);
          }
+      }
+
+      /// <summary>
+      /// Remove the entity associated with an IFCAnyHandle from the IFC database and empty out the IFCAnyHandle.
+      /// </summary>
+      /// <param name="handle">The handle.</param>
+      public static void Delete(IFCAnyHandle handle)
+      {
+         if (!IsNullOrHasNoValue(handle))
+            handle.Delete();
       }
    }
 }

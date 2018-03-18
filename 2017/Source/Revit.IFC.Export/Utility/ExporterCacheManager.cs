@@ -104,6 +104,11 @@ namespace Revit.IFC.Export.Utility
       static ElementToHandleCache m_ElementToHandleCache;
 
       ///<summary>
+      /// The ElementTypeToHandleCache cache.
+      /// </summary>
+      static ElementToHandleCache m_ElementTypeToHandleCache;
+
+      ///<summary>
       /// The ExportOptions cache.
       /// </summary>
       static ExportOptionsCache m_ExportOptionsCache;
@@ -153,24 +158,24 @@ namespace Revit.IFC.Export.Utility
       static MaterialHandleCache m_MaterialHandleCache;
 
       /// <summary>
-         /// The MaterialConsituent object cache (starting IFC4)
-         /// </summary>
-         //static MaterialHandleCache m_MaterialConstituentCache;
+      /// The MaterialConsituent object cache (starting IFC4)
+      /// </summary>
+      //static MaterialHandleCache m_MaterialConstituentCache;
 
-         /// <summary>
-         /// The MaterialConstituentSet cache (starting IFC4)
-         /// </summary>
-         static MaterialConstituentSetCache m_MaterialConstituentSetCache;
+      /// <summary>
+      /// The MaterialConstituentSet cache (starting IFC4)
+      /// </summary>
+      static MaterialConstituentSetCache m_MaterialConstituentSetCache;
 
-        /// <summary>
+      /// <summary>
       /// The MaterialLayerRelationsCache object.
       /// </summary>
-         static MaterialSetUsageCache m_MaterialSetUsageCache;
+      static MaterialSetUsageCache m_MaterialSetUsageCache;
 
       /// <summary>
       /// The MaterialLayerSetCache object.
       /// </summary>
-        static MaterialSetCache m_MaterialSetCache;
+      static MaterialSetCache m_MaterialSetCache;
 
       /// <summary>
       /// The MEPCache object.
@@ -186,6 +191,8 @@ namespace Revit.IFC.Export.Utility
       /// The top level IfcOwnerHistory handle.
       /// </summary>
       static IFCAnyHandle m_OwnerHistoryHandle;
+
+      static AttributeCache m_AttributeCache;
 
       /// <summary>
       /// The ParameterCache object.
@@ -286,9 +293,9 @@ namespace Revit.IFC.Export.Utility
       static TypeRelationsCache m_TypeRelationsCache;
 
       /// <summary>
-        /// The TypeObjectsCache object.
+      /// The TypeObjectsCache object.
       /// </summary>
-        static TypeObjectsCache m_TypeObjectsCache;
+      static TypeObjectsCache m_TypeObjectsCache;
 
       /// <summary>
       /// The WallConnectionDataCache object.
@@ -368,9 +375,9 @@ namespace Revit.IFC.Export.Utility
       static IDictionary<ElementId, int> m_HostObjectsLevelIndex;
 
       /// <summary>
-        /// The WallType cache that maps Revit wall type or curtain wall type id to the IFC wall type handle.
+      /// The WallType cache that maps Revit wall type or curtain wall type id to the IFC wall type handle.
       /// </summary>
-        static IDictionary<ElementId, IFCAnyHandle> m_WallTypeCache;
+      static IDictionary<ElementId, IFCAnyHandle> m_WallTypeCache;
 
       /// <summary>
       /// Keeps relationship of Ceiling to the Space(s) where it belongs to. Used to determine Space containment for Ceiling object that is fully contained in Space (for FMHandOverView)
@@ -518,6 +525,16 @@ namespace Revit.IFC.Export.Utility
          set { m_LanguageType = value; }
       }
 
+      public static AttributeCache AttributeCache
+      {
+         get
+         {
+            if (m_AttributeCache == null)
+               m_AttributeCache = new AttributeCache();
+            return m_AttributeCache;
+         }
+      }
+
       /// <summary>
       /// The ParameterCache object.
       /// </summary>
@@ -655,15 +672,15 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
-        /// The Material___SetCache object (includes IfcMaterialLayerSet, IfcMaterialProfileSet, IfcMaterialConstituentSet in IFC4).
+      /// The Material___SetCache object (includes IfcMaterialLayerSet, IfcMaterialProfileSet, IfcMaterialConstituentSet in IFC4).
       /// </summary>
-        public static MaterialSetCache MaterialSetCache
+      public static MaterialSetCache MaterialSetCache
       {
          get
          {
-                if (m_MaterialSetCache == null)
-                    m_MaterialSetCache = new MaterialSetCache();
-                return m_MaterialSetCache;
+            if (m_MaterialSetCache == null)
+               m_MaterialSetCache = new MaterialSetCache();
+            return m_MaterialSetCache;
          }
       }
 
@@ -734,17 +751,17 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
-         /// The MaterialConstituent to IfcMaterial cache
-         /// </summary>
-         //public static MaterialHandleCache MaterialConstituentCache
-         //{
-         //   get
-         //   {
-         //      if (m_MaterialConstituentCache == null)
-         //         m_MaterialConstituentCache = new MaterialHandleCache();
-         //      return m_MaterialConstituentCache;
-         //   }
-         //}
+      /// The MaterialConstituent to IfcMaterial cache
+      /// </summary>
+      //public static MaterialHandleCache MaterialConstituentCache
+      //{
+      //   get
+      //   {
+      //      if (m_MaterialConstituentCache == null)
+      //         m_MaterialConstituentCache = new MaterialHandleCache();
+      //      return m_MaterialConstituentCache;
+      //   }
+      //}
 
       public static MaterialConstituentSetCache MaterialConstituentSetCache
       {
@@ -756,7 +773,7 @@ namespace Revit.IFC.Export.Utility
          }
       }
 
-        /// <summary>
+      /// <summary>
       /// The MaterialRelationsCache object.
       /// </summary>
       public static MaterialRelationsCache MaterialRelationsCache
@@ -772,13 +789,13 @@ namespace Revit.IFC.Export.Utility
       /// <summary>
       /// The MaterialLayerRelationsCache object.
       /// </summary>
-        public static MaterialSetUsageCache MaterialLayerRelationsCache
+      public static MaterialSetUsageCache MaterialLayerRelationsCache
       {
          get
          {
-                if (m_MaterialSetUsageCache == null)
-                    m_MaterialSetUsageCache = new MaterialSetUsageCache();
-                return m_MaterialSetUsageCache;
+            if (m_MaterialSetUsageCache == null)
+               m_MaterialSetUsageCache = new MaterialSetUsageCache();
+            return m_MaterialSetUsageCache;
          }
       }
 
@@ -900,15 +917,15 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
-        /// The TypeObjectsCache object.
+      /// The TypeObjectsCache object.
       /// </summary>
-        public static TypeObjectsCache TypeObjectsCache
+      public static TypeObjectsCache TypeObjectsCache
       {
          get
          {
-                if (m_TypeObjectsCache == null)
-                    m_TypeObjectsCache = new TypeObjectsCache();
-                return m_TypeObjectsCache;
+            if (m_TypeObjectsCache == null)
+               m_TypeObjectsCache = new TypeObjectsCache();
+            return m_TypeObjectsCache;
          }
       }
 
@@ -952,7 +969,7 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
-        /// The ExportOptionsCache object.
+      /// The ExportOptionsCache object.
       /// </summary>
       public static ElementToHandleCache ElementToHandleCache
       {
@@ -961,6 +978,19 @@ namespace Revit.IFC.Export.Utility
             if (m_ElementToHandleCache == null)
                m_ElementToHandleCache = new ElementToHandleCache();
             return m_ElementToHandleCache;
+         }
+      }
+
+      /// <summary>
+      /// The ElementTypeToHandleCache object, used to cache Revit element type ids to IFC entity handles.
+      /// </summary>
+      public static ElementToHandleCache ElementTypeToHandleCache
+      {
+         get
+         {
+            if (m_ElementTypeToHandleCache == null)
+               m_ElementTypeToHandleCache = new ElementToHandleCache();
+            return m_ElementTypeToHandleCache;
          }
       }
 
@@ -1196,19 +1226,19 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
-        /// The WallType cache that maps Revit wall type or curtain wall type id to the IFC wall type handle.
-        /// </summary>
-        public static IDictionary<ElementId, IFCAnyHandle> WallTypeCache
-        {
-            get
-            {
-                if (m_WallTypeCache == null)
-                    m_WallTypeCache = new Dictionary<ElementId, IFCAnyHandle>();
-                return m_WallTypeCache;
-            }
-        }
+      /// The WallType cache that maps Revit wall type or curtain wall type id to the IFC wall type handle.
+      /// </summary>
+      public static IDictionary<ElementId, IFCAnyHandle> WallTypeCache
+      {
+         get
+         {
+            if (m_WallTypeCache == null)
+               m_WallTypeCache = new Dictionary<ElementId, IFCAnyHandle>();
+            return m_WallTypeCache;
+         }
+      }
 
-        /// <summary>
+      /// <summary>
       /// Ceiling and Space relationship cache. We need it to check whether a Ceiling should be contained in a Space later on when exporting Ceiling
       /// </summary>
       public static IDictionary<ElementId, IList<ElementId>> CeilingSpaceRelCache
@@ -1273,8 +1303,9 @@ namespace Revit.IFC.Export.Utility
          m_DefaultCartesianTransformationOperator3D = null;
          m_DoorWindowDelayedOpeningCreatorCache = null;
          m_DummyHostCache = null;
-            m_ElementToHandleCache = null;
+         m_ElementToHandleCache = null;
          m_ElementsInAssembliesCache = null;
+         m_ElementTypeToHandleCache = null;
          m_ExportOptionsCache = null;
          m_FabricAreaHandleCache = null;
          m_GridCache = null;
@@ -1288,10 +1319,10 @@ namespace Revit.IFC.Export.Utility
          m_IsExternalParameterValueCache = null;
          m_LevelInfoCache = null;
          m_MaterialIdToStyleHandleCache = null;
-            m_MaterialSetUsageCache = null;
-            m_MaterialSetCache = null;
-            //m_MaterialConstituentCache = null;
-            m_MaterialConstituentSetCache = null;
+         m_MaterialSetUsageCache = null;
+         m_MaterialSetCache = null;
+         //m_MaterialConstituentCache = null;
+         m_MaterialConstituentSetCache = null;
          m_MaterialHandleCache = null;
          m_MaterialRelationsCache = null;
          m_MEPCache = null;
@@ -1313,12 +1344,12 @@ namespace Revit.IFC.Export.Utility
          m_StairRampContainerInfoCache = null;
          m_SystemsCache = null;
          m_TrussCache = null;
-            m_TypeObjectsCache = null;
+         m_TypeObjectsCache = null;
          m_TypePropertyInfoCache = null;
          m_TypeRelationsCache = null;
          m_ViewScheduleElementCache = null;
          m_WallConnectionDataCache = null;
-            m_WallTypeCache = null;
+         m_WallTypeCache = null;
          m_UnitsCache = null;
          m_ZoneCache = null;
          m_ZoneInfoCache = null;

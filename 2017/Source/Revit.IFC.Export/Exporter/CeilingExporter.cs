@@ -112,14 +112,10 @@ namespace Revit.IFC.Export.Exporter
                      defaultCoveringEnumType = "ROOFING";
 
                   string instanceGUID = GUIDUtil.CreateGUID(element);
-                  string instanceName = NamingUtil.GetNameOverride(element, NamingUtil.GetIFCName(element));
-                  string instanceDescription = NamingUtil.GetDescriptionOverride(element, null);
-                  string instanceObjectType = NamingUtil.GetObjectTypeOverride(element, exporterIFC.GetFamilyName());
-                  string instanceTag = NamingUtil.GetTagOverride(element, NamingUtil.CreateIFCElementId(element));
                   string coveringType = IFCValidateEntry.GetValidIFCType(element, ifcEnumType, defaultCoveringEnumType);
 
-                  IFCAnyHandle covering = IFCInstanceExporter.CreateCovering(file, instanceGUID, ExporterCacheManager.OwnerHistoryHandle,
-                      instanceName, instanceDescription, instanceObjectType, setter.LocalPlacement, prodRep, instanceTag, coveringType);
+                  IFCAnyHandle covering = IFCInstanceExporter.CreateCovering(exporterIFC, element, instanceGUID, ExporterCacheManager.OwnerHistoryHandle,
+                      setter.LocalPlacement, prodRep, coveringType);
 
                   if (exportParts)
                   {
@@ -162,7 +158,7 @@ namespace Revit.IFC.Export.Exporter
                      if (ceiling != null)
                      {
                         HostObjectExporter.ExportHostObjectMaterials(exporterIFC, ceiling, covering,
-                            geomElem, productWrapper, ElementId.InvalidElementId, Toolkit.IFCLayerSetDirection.Axis3, null);
+                            geomElem, productWrapper, ElementId.InvalidElementId, Toolkit.IFCLayerSetDirection.Axis3, null, null);
                      }
                      else
                      {

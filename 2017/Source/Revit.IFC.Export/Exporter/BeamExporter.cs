@@ -200,6 +200,8 @@ namespace Revit.IFC.Export.Exporter
          XYZ projDir = axisInfo.AxisNormal;
          Transform lcs = axisInfo.LCSAsTransform;
 
+         string representationTypeOpt = "Curve2D";  // This is by IFC2x2+ convention.
+
          XYZ curveOffset = XYZ.Zero;
          if (offsetTransform != null)
             curveOffset = -UnitUtil.UnscaleLength(offsetTransform.Origin);
@@ -212,15 +214,38 @@ namespace Revit.IFC.Export.Exporter
 
          Transform offsetLCS = new Transform(lcs);
          offsetLCS.Origin = XYZ.Zero;
-         IFCGeometryInfo info = IFCGeometryInfo.CreateCurveGeometryInfo(exporterIFC, offsetLCS, projDir, false);
-         ExporterIFCUtils.CollectGeometryInfo(exporterIFC, info, curve, curveOffset, true);
+         IList<IFCAnyHandle> axis_items = null;
+         if (ExporterCacheManager.ExportOptionsCache.ExportAs4ReferenceView)
+         {
+            IFCFile file = exporterIFC.GetFile();
+            IList<int> segmentIndex = null;
+            IList<IList<double>> pointList = GeometryUtil.PointListFromCurve(exporterIFC, curve, null, null, out segmentIndex);
 
-         IList<IFCAnyHandle> axis_items = info.GetCurves();
+            // For now because of no support in creating IfcLineIndex and IfcArcIndex yet, it is set to null
+            //IList<IList<int>> segmentIndexList = new List<IList<int>>();
+            //segmentIndexList.Add(segmentIndex);
+            IList<IList<int>> segmentIndexList = null;
+
+            IFCAnyHandle pointListHnd = IFCInstanceExporter.CreateCartesianPointList3D(file, pointList);
+            IFCAnyHandle axisHnd = IFCInstanceExporter.CreateIndexedPolyCurve(file, pointListHnd, segmentIndexList, false);
+            axis_items = new List<IFCAnyHandle>();
+            if (!IFCAnyHandleUtil.IsNullOrHasNoValue(axisHnd))
+            {
+               axis_items.Add(axisHnd);
+               representationTypeOpt = "Curve3D";        // We use Curve3D for IFC4RV Axis
+            }
+         }
+         else
+         {
+            IFCGeometryInfo info = IFCGeometryInfo.CreateCurveGeometryInfo(exporterIFC, offsetLCS, projDir, false);
+            ExporterIFCUtils.CollectGeometryInfo(exporterIFC, info, curve, curveOffset, true);
+
+            axis_items = info.GetCurves();
+         }
 
          if (axis_items.Count > 0)
          {
             string identifierOpt = "Axis";   // This is by IFC2x2+ convention.
-            string representationTypeOpt = "Curve2D";  // This is by IFC2x2+ convention.
             IFCAnyHandle axisRep = RepresentationUtil.CreateShapeRepresentation(exporterIFC, element, catId, exporterIFC.Get3DContextHandle(identifierOpt),
                identifierOpt, representationTypeOpt, axis_items);
             return axisRep;
@@ -353,21 +378,12 @@ namespace Revit.IFC.Export.Exporter
             return;
          }
 
-         string elemGUID = GUIDUtil.CreateGUID(elementType);
-         string elemName = NamingUtil.GetNameOverride(elementType, NamingUtil.GetIFCName(elementType));
-         string elemDesc = NamingUtil.GetDescriptionOverride(elementType, null);
-         string elemTag = NamingUtil.GetTagOverride(elementType, NamingUtil.CreateIFCElementId(elementType));
-         string elemApplicableOccurence = NamingUtil.GetOverrideStringValue(elementType, "IfcApplicableOccurence", null);
-         string elemElementType = NamingUtil.GetOverrideStringValue(elementType, "IfcElementType", null);
-
          // Property sets will be set later.
-         beamType = IFCInstanceExporter.CreateBeamType(exporterIFC.GetFile(), elemGUID, ExporterCacheManager.OwnerHistoryHandle,
-            elemName, elemDesc, elemApplicableOccurence, null, null, elemTag, elemElementType, GetBeamType(elementType, predefinedType));
+         beamType = IFCInstanceExporter.CreateBeamType(exporterIFC.GetFile(), elementType, null, null, predefinedType);
 
          wrapper.RegisterHandleWithElementType(elementType as ElementType, beamType, null);
 
          ExporterCacheManager.TypeRelationsCache.Add(beamType, elementHandle);
-         ExporterCacheManager.ElementToHandleCache.Register(typeElemId, beamType);
       }
 
       /// <summary>
@@ -489,15 +505,10 @@ namespace Revit.IFC.Export.Exporter
                   IFCAnyHandle prodRep = IFCInstanceExporter.CreateProductDefinitionShape(file, null, null, representations);
 
                   string instanceGUID = GUIDUtil.CreateGUID(element);
-                  string instanceName = NamingUtil.GetNameOverride(element, NamingUtil.GetIFCName(element));
-                  string instanceDescription = NamingUtil.GetDescriptionOverride(element, null);
-                  string instanceObjectType = NamingUtil.GetObjectTypeOverride(element, NamingUtil.CreateIFCObjectName(exporterIFC, element));
-                  string instanceTag = NamingUtil.GetTagOverride(element, NamingUtil.CreateIFCElementId(element));
                   string preDefinedType = "BEAM";     // Default predefined type for Beam
                   preDefinedType = IFCValidateEntry.GetValidIFCType(element, preDefinedType);
 
-                  beam = IFCInstanceExporter.CreateBeam(file, instanceGUID, ExporterCacheManager.OwnerHistoryHandle,
-                      instanceName, instanceDescription, instanceObjectType, extrusionCreationData.GetLocalPlacement(), prodRep, instanceTag, preDefinedType);
+                  beam = IFCInstanceExporter.CreateBeam(exporterIFC, element, instanceGUID, ExporterCacheManager.OwnerHistoryHandle, extrusionCreationData.GetLocalPlacement(), prodRep, preDefinedType);
 
                   IFCAnyHandle mpSetUsage;
                   if (materialProfileSet != null)

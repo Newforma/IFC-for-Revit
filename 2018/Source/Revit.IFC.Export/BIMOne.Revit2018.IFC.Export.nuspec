@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata>
         <id>BIMOne.Revit2018.IFC.Export</id>
-        <version>18.2.0</version>
+        <version>18.3.1</version>
         <authors>BIM One Inc.</authors>
         <description>IFC Exporter for Revit.</description>
     <dependencies>

@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata>
         <id>BIMOne.Revit2017.IFC.Common</id>
-        <version>17.4.0</version>
+        <version>17.5.0</version>
         <authors>BIM One Inc.</authors>
         <description>IFC Import/Exporter for Revit.</description>
     <dependencies>
