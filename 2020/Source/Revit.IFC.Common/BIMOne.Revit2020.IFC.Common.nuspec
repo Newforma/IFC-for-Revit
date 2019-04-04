@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+    <metadata>
+        <id>BIMOne.Revit2020.IFC.Common</id>
+        <version>20.0.0</version>
+        <authors>BIM One Inc.</authors>
+        <description>IFC Import/Exporter for Revit.</description>
+    <dependencies>
+      <package id="BIMOne.Autodesk.Revit2020.RevitAPI" version="20.0.0.375"/>
+	  <package id="BIMOne.Autodesk.Revit2020.RevitAPIIFC" version="20.0.0.375"/>
+      <dependency id="Newtonsoft.Json" version="4.5.1" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="bin\Release\*.dll" target="lib\net452" />
+  </files>
+</package>
