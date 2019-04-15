@@ -6,8 +6,8 @@
         <authors>BIM One Inc.</authors>
         <description>IFC Exporter for Revit.</description>
     <dependencies>
-      <dependency id="BIMOne.Autodesk.Revit2020.RevitAPI" version="20.0.0.375"/>
-	  <dependency id="BIMOne.Autodesk.Revit2020.RevitAPIIFC" version="20.0.0.375"/>
+      <dependency id="BIMOne.Autodesk.Revit2020.RevitAPI" version="20.0.0.377"/>
+	  <dependency id="BIMOne.Autodesk.Revit2020.RevitAPIIFC" version="20.0.0.377"/>
       <dependency id="Newtonsoft.Json" version="4.5.1" />
     </dependencies>
   </metadata>

@@ -49,10 +49,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="RevitAPI, Version=20.0.0.0, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\..\packages\BIMOne.Autodesk.Revit2020.RevitAPI.20.0.0.375\lib\net40\RevitAPI.dll</HintPath>
+      <HintPath>..\..\packages\BIMOne.Autodesk.Revit2020.RevitAPI.20.0.0.377\lib\net40\RevitAPI.dll</HintPath>
     </Reference>
     <Reference Include="RevitAPIIFC, Version=20.0.0.0, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>..\..\packages\BIMOne.Autodesk.Revit2020.RevitAPIIFC.20.0.0.375\lib\net47\RevitAPIIFC.dll</HintPath>
+      <HintPath>..\..\packages\BIMOne.Autodesk.Revit2020.RevitAPIIFC.20.0.0.377\lib\net47\RevitAPIIFC.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.XML" />
