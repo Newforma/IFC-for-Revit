@@ -78,6 +78,18 @@ namespace Revit.IFC.Common.Utility
       }
 
       /// <summary>
+      /// Override the name attribute of a particular handle to a non-null string value.
+      /// </summary>
+      /// <param name="handle">The handle, which is assumed to have an attribute called "Name".</param>
+      /// <param name="value">The non-null value.</param>
+      public static void OverrideNameAttribute(IFCAnyHandle handle, string value)
+      {
+         if (value == null)
+            return;
+         IFCAnyHandleUtil.SetAttribute(handle, "Name", value);
+      }
+                  
+      /// <summary>
       /// New overload for ValidateSubType that takes the string of IFC type instead of the enum. String must be validated first!
       /// </summary>
       /// <param name="handle"></param>
@@ -208,7 +220,8 @@ namespace Revit.IFC.Common.Utility
          if (String.IsNullOrEmpty(name))
             throw new ArgumentException("The name is empty.", "name");
 
-         if (!string.IsNullOrEmpty(value))
+         // This allows you to set empty strings, which may not always be intended, but should be allowed.
+         if (value != null)
             handle.SetAttribute(name, IFCData.CreateString(value));
       }
 
@@ -1011,7 +1024,7 @@ namespace Revit.IFC.Common.Utility
       /// Gets the object type of a handle.
       /// </summary>
       /// <param name="handle">The handle.</param>
-      /// <returns>The object type.</returns>
+      /// <returns>The object type, or null if it doesn't exist.</returns>
       public static string GetObjectType(IFCAnyHandle handle)
       {
          if (handle == null)
@@ -1021,13 +1034,13 @@ namespace Revit.IFC.Common.Utility
             throw new ArgumentException("Invalid handle.");
 
          if (!IsSubTypeOf(handle, IFCEntityType.IfcObject))
-            throw new ArgumentException("Not an IfcObject handle.");
+            return null;
 
          IFCData ifcData = handle.GetAttribute("ObjectType");
          if (ifcData.PrimitiveType == IFCDataPrimitiveType.String)
             return ifcData.AsString();
 
-         throw new InvalidOperationException("Failed to get object type.");
+         return null;
       }
 
       /// <summary>
@@ -1082,9 +1095,13 @@ namespace Revit.IFC.Common.Utility
          if (!hnd.HasValue)
             throw new ArgumentException("Invalid handle.");
 
-         IFCData ifcData = hnd.GetAttribute(name);
-         if (ifcData.PrimitiveType == IFCDataPrimitiveType.Instance)
-            return ifcData.AsInstance();
+         try
+         {
+            IFCData ifcData = hnd.GetAttribute(name);
+            if (ifcData.PrimitiveType == IFCDataPrimitiveType.Instance)
+               return ifcData.AsInstance();
+         }
+         catch { }
 
          return null;
       }
@@ -1103,9 +1120,13 @@ namespace Revit.IFC.Common.Utility
          if (!hnd.HasValue)
             throw new ArgumentException("Invalid handle.");
 
-         IFCData ifcData = hnd.GetAttribute(name);
-         if (ifcData.PrimitiveType == IFCDataPrimitiveType.String)
-            return ifcData.AsString();
+         try
+         {
+            IFCData ifcData = hnd.GetAttribute(name);
+            if (ifcData.PrimitiveType == IFCDataPrimitiveType.String)
+               return ifcData.AsString();
+         }
+         catch { }
 
          return null;
       }
@@ -1124,9 +1145,13 @@ namespace Revit.IFC.Common.Utility
          if (!hnd.HasValue)
             throw new ArgumentException("Invalid handle.");
 
-         IFCData ifcData = hnd.GetAttribute(name);
-         if (ifcData.PrimitiveType == IFCDataPrimitiveType.Integer)
-            return ifcData.AsInteger();
+         try
+         {
+            IFCData ifcData = hnd.GetAttribute(name);
+            if (ifcData.PrimitiveType == IFCDataPrimitiveType.Integer)
+               return ifcData.AsInteger();
+         }
+         catch { }
 
          return null;
       }
@@ -1145,9 +1170,13 @@ namespace Revit.IFC.Common.Utility
          if (!hnd.HasValue)
             throw new ArgumentException("Invalid handle.");
 
-         IFCData ifcData = hnd.GetAttribute(name);
-         if (ifcData.PrimitiveType == IFCDataPrimitiveType.Double)
-            return ifcData.AsDouble();
+         try
+         {
+            IFCData ifcData = hnd.GetAttribute(name);
+            if (ifcData.PrimitiveType == IFCDataPrimitiveType.Double)
+               return ifcData.AsDouble();
+         }
+         catch { }
 
          return null;
       }
@@ -1166,9 +1195,13 @@ namespace Revit.IFC.Common.Utility
          if (!hnd.HasValue)
             throw new ArgumentException("Invalid handle.");
 
-         IFCData ifcData = hnd.GetAttribute(name);
-         if (ifcData.PrimitiveType == IFCDataPrimitiveType.Boolean)
-            return ifcData.AsBoolean();
+         try
+         {
+            IFCData ifcData = hnd.GetAttribute(name);
+            if (ifcData.PrimitiveType == IFCDataPrimitiveType.Boolean)
+               return ifcData.AsBoolean();
+         }
+         catch { }
 
          return null;
       }
@@ -1187,9 +1220,13 @@ namespace Revit.IFC.Common.Utility
          if (!hnd.HasValue)
             throw new ArgumentException("Invalid handle.");
 
-         IFCData ifcData = hnd.GetAttribute(name);
-         if (ifcData.PrimitiveType == IFCDataPrimitiveType.Logical)
-            return ifcData.AsLogical();
+         try
+         {
+            IFCData ifcData = hnd.GetAttribute(name);
+            if (ifcData.PrimitiveType == IFCDataPrimitiveType.Logical)
+               return ifcData.AsLogical();
+         }
+         catch { }
 
          return null;
       }
@@ -1212,9 +1249,13 @@ namespace Revit.IFC.Common.Utility
          if (!hnd.HasValue)
             throw new ArgumentException("Invalid handle.");
 
-         IFCData ifcData = hnd.GetAttribute(name);
-         if (ifcData.PrimitiveType == IFCDataPrimitiveType.Enumeration)
-            return ifcData.AsString();
+         try
+         {
+            IFCData ifcData = hnd.GetAttribute(name);
+            if (ifcData.PrimitiveType == IFCDataPrimitiveType.Enumeration)
+               return ifcData.AsString();
+         }
+         catch { }
 
          return null;
       }
@@ -1520,43 +1561,43 @@ namespace Revit.IFC.Common.Utility
       }
 
       /// <summary>
-        /// Gets Opening representations of a representation handle.
-        /// </summary>
-        /// <param name="representation">The representation handle.</param>
-        /// <returns>The list of representations.</returns>
-        public static List<IFCAnyHandle> GetOpenings(IFCAnyHandle ifcElement)
-        {
-            if (ifcElement == null)
-                throw new ArgumentNullException("ifcElement");
+      /// Gets Opening representations of a representation handle.
+      /// </summary>
+      /// <param name="representation">The representation handle.</param>
+      /// <returns>The list of representations.</returns>
+      public static List<IFCAnyHandle> GetOpenings(IFCAnyHandle ifcElement)
+      {
+         if (ifcElement == null)
+            throw new ArgumentNullException("ifcElement");
 
-            if (!ifcElement.HasValue)
-                throw new ArgumentException("Invalid handle.");
+         if (!ifcElement.HasValue)
+            throw new ArgumentException("Invalid handle.");
 
-            if (!IsSubTypeOf(ifcElement, IFCEntityType.IfcElement))
-                throw new ArgumentException("The operation is not valid for this handle.");
+         if (!IsSubTypeOf(ifcElement, IFCEntityType.IfcElement))
+            throw new ArgumentException("The operation is not valid for this handle.");
 
-            List<IFCAnyHandle> openings = new List<IFCAnyHandle>();
-            IFCData ifcData = ifcElement.GetAttribute("HasOpenings");
-            if (ifcData.PrimitiveType == IFCDataPrimitiveType.Aggregate)
+         List<IFCAnyHandle> openings = new List<IFCAnyHandle>();
+         IFCData ifcData = ifcElement.GetAttribute("HasOpenings");
+         if (ifcData.PrimitiveType == IFCDataPrimitiveType.Aggregate)
+         {
+            IFCAggregate aggregate = ifcData.AsAggregate();
+            if (aggregate != null && aggregate.Count > 0)
             {
-                IFCAggregate aggregate = ifcData.AsAggregate();
-                if (aggregate != null && aggregate.Count > 0)
-                {
-                    foreach (IFCData val in aggregate)
-                    {
-                        if (val.PrimitiveType == IFCDataPrimitiveType.Instance)
-                        {
-                            IFCAnyHandle relVoidElement = val.AsInstance();
-                            IFCData openingElementData = relVoidElement.GetAttribute("RelatedOpeningElement");
-                            openings.Add(openingElementData.AsInstance());
-                        }
-                    }
-                }
+               foreach (IFCData val in aggregate)
+               {
+                  if (val.PrimitiveType == IFCDataPrimitiveType.Instance)
+                  {
+                     IFCAnyHandle relVoidElement = val.AsInstance();
+                     IFCData openingElementData = relVoidElement.GetAttribute("RelatedOpeningElement");
+                     openings.Add(openingElementData.AsInstance());
+                  }
+               }
             }
-            return openings;
-        }
+         }
+         return openings;
+      }
 
-        /// <summary>
+      /// <summary>
       /// Adds representations of a product representation.
       /// </summary>
       /// <param name="productRepresentation">The product representation handle.</param>

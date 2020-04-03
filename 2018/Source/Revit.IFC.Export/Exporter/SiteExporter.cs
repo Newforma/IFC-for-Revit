@@ -91,10 +91,9 @@ namespace Revit.IFC.Export.Exporter
          }
 
          // Check the intended IFC entity or type name is in the exclude list specified in the UI
-         Common.Enums.IFCEntityType elementClassTypeEnum;
-         if (Enum.TryParse<Common.Enums.IFCEntityType>("IfcSite", out elementClassTypeEnum))
-            if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
-               return;
+         Common.Enums.IFCEntityType elementClassTypeEnum = Common.Enums.IFCEntityType.IfcSite;
+         if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
+            return;
 
          IFCFile file = exporterIFC.GetFile();
          using (IFCTransaction tr = new IFCTransaction(file))
@@ -267,8 +266,14 @@ namespace Revit.IFC.Export.Exporter
 
             if (exportSite)
             {
+               bool assignToBldg = false;
+               bool assignToSite = false;
+               IFCAnyHandle address = Exporter.CreateIFCAddress(file, doc, projectInfo, out assignToBldg, out assignToSite);
+               if (!assignToSite)
+                  address = null;
+
                siteHandle = IFCInstanceExporter.CreateSite(exporterIFC, element, siteGUID, ownerHistory, siteName, siteDescription, localPlacement,
-                  siteRepresentation, siteLongName, IFCElementComposition.Element, latitude, longitude, elevation, siteLandTitleNumber, null);
+                  siteRepresentation, siteLongName, IFCElementComposition.Element, latitude, longitude, elevation, siteLandTitleNumber, address);
                productWrapper.AddSite(mainSiteElement, siteHandle);
                ExporterCacheManager.SiteHandle = siteHandle;
             }

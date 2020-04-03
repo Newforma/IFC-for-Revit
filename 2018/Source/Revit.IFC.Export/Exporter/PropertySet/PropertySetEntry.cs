@@ -24,32 +24,32 @@ using Autodesk.Revit.DB.IFC;
 
 namespace Revit.IFC.Export.Exporter.PropertySet
 {
-    /// <summary>
-    /// Represents the type of the container for a property.
-    /// </summary>
-    public enum PropertyValueType
-    {
-        /// <summary>
-        /// A single property (IfcPropertySingleValue)
-        /// </summary>
-        SingleValue,
-        /// <summary>
-        /// An enumerated property (IfcPropertyEnumeratedValue)
-        /// </summary>
-        EnumeratedValue,
-        /// <summary>
-        /// A list property (IfcPropertyListValue)
-        /// </summary>
-        ListValue,
-        /// <summary>
-        /// A reference property (IfcPropertyReferenceValue)
-        /// </summary>
-        ReferenceValue,
-        /// <summary>
-        /// A Table property (IfcPropertyTableValue)
-        /// </summary>
-        TableValue
-    }
+   /// <summary>
+   /// Represents the type of the container for a property.
+   /// </summary>
+   public enum PropertyValueType
+   {
+      /// <summary>
+      /// A single property (IfcPropertySingleValue)
+      /// </summary>
+      SingleValue,
+      /// <summary>
+      /// An enumerated property (IfcPropertyEnumeratedValue)
+      /// </summary>
+      EnumeratedValue,
+      /// <summary>
+      /// A list property (IfcPropertyListValue)
+      /// </summary>
+      ListValue,
+      /// <summary>
+      /// A reference property (IfcPropertyReferenceValue)
+      /// </summary>
+      ReferenceValue,
+      /// <summary>
+      /// A Table property (IfcPropertyTableValue)
+      /// </summary>
+      TableValue
+   }
 
    /// <summary>
    /// Represents the type of a property.
@@ -141,13 +141,13 @@ namespace Revit.IFC.Export.Exporter.PropertySet
       /// </summary>
       PositivePlaneAngle,
       /// <summary>
-      /// An electrical current value
+      /// An electric current value
       /// </summary>
-      ElectricalCurrent,
+      ElectricCurrent,
       /// <summary>
-      /// An electrical voltage value
+      /// An electric voltage value
       /// </summary>
-      ElectricalVoltage,
+      ElectricVoltage,
       /// <summary>
       /// Volume
       /// </summary>
@@ -208,8 +208,6 @@ namespace Revit.IFC.Export.Exporter.PropertySet
       PlanarForce,
       Monetary,
       ThermalConductivity,
-      ElectricCurrent,
-      ElectricVoltage,
       IfcMaterialDefinition,
       RotationalFrequency,
       AreaDensity,
@@ -329,20 +327,20 @@ namespace Revit.IFC.Export.Exporter.PropertySet
          }
       }
 
-        /// <summary>
-        /// The value type of the IFC property set entry.
-        /// </summary>
-        public PropertyValueType PropertyValueType
-        {
-            get
-            {
-                return m_PropertyValueType;
-            }
-            set
-            {
-                m_PropertyValueType = value;
-            }
-        }
+      /// <summary>
+      /// The value type of the IFC property set entry.
+      /// </summary>
+      public PropertyValueType PropertyValueType
+      {
+         get
+         {
+            return m_PropertyValueType;
+         }
+         set
+         {
+            m_PropertyValueType = value;
+         }
+      }
 
       /// <summary>
       /// The type of the Enum that will validate the value for an enumeration.
@@ -366,15 +364,15 @@ namespace Revit.IFC.Export.Exporter.PropertySet
          {
             //if (m_DefaultValue != null)
             //{
-               //switch (PropertyType)
-               //{
-                  //case PropertyType.Label:
-                     //return m_DefaultProperty = PropertyUtil.CreateLabelProperty(file, PropertyName, m_DefaultValue.ValueString, PropertyValueType, PropertyEnumerationType);
-                  //case PropertyType.Text:
-                     //return m_DefaultProperty = PropertyUtil.CreateTextProperty(file, PropertyName, m_DefaultValue.ValueString, PropertyValueType);
-                  //case PropertyType.Identifier:
-                     //return m_DefaultProperty = PropertyUtil.CreateIdentifierProperty(file, PropertyName, m_DefaultValue.ValueString, PropertyValueType);
-               //}
+            //switch (PropertyType)
+            //{
+            //case PropertyType.Label:
+            //return m_DefaultProperty = PropertyUtil.CreateLabelProperty(file, PropertyName, m_DefaultValue.ValueString, PropertyValueType, PropertyEnumerationType);
+            //case PropertyType.Text:
+            //return m_DefaultProperty = PropertyUtil.CreateTextProperty(file, PropertyName, m_DefaultValue.ValueString, PropertyValueType);
+            //case PropertyType.Identifier:
+            //return m_DefaultProperty = PropertyUtil.CreateIdentifierProperty(file, PropertyName, m_DefaultValue.ValueString, PropertyValueType);
+            //}
             //}
          }
          return m_DefaultProperty;
@@ -450,10 +448,10 @@ namespace Revit.IFC.Export.Exporter.PropertySet
       /// </summary>
       /// <param name="revitParameterName">Revit parameter name.</param>
       /// <returns>The PropertySetEntry.</returns>
-      public static PropertySetEntry CreateElectricalCurrent(string revitParameterName)
+      public static PropertySetEntry CreateElectricCurrent(string revitParameterName)
       {
          PropertySetEntry pse = new PropertySetEntry(revitParameterName);
-         pse.PropertyType = PropertyType.ElectricalCurrent;
+         pse.PropertyType = PropertyType.ElectricCurrent;
          return pse;
       }
 
@@ -462,13 +460,37 @@ namespace Revit.IFC.Export.Exporter.PropertySet
       /// </summary>
       /// <param name="revitParameterName">Revit parameter name.</param>
       /// <returns>The PropertySetEntry.</returns>
-      public static PropertySetEntry CreateElectricalVoltage(string revitParameterName)
+      public static PropertySetEntry CreateElectricVoltage(string revitParameterName)
       {
          PropertySetEntry pse = new PropertySetEntry(revitParameterName);
-         pse.PropertyType = PropertyType.ElectricalVoltage;
+         pse.PropertyType = PropertyType.ElectricVoltage;
          return pse;
       }
 
+      /// <summary>
+      /// Creates an entry of type Illuminance.
+      /// </summary>
+      /// <param name="revitParameterName">Revit parameter name.</param>
+      /// <returns>The PropertySetEntry.</returns>
+      public static PropertySetEntry CreateIlluminance(string revitParameterName)
+      {
+         PropertySetEntry pse = new PropertySetEntry(revitParameterName);
+         pse.PropertyType = PropertyType.Illuminance;
+         return pse;
+      }
+
+      /// <summary>
+      /// Creates an entry of type Volume.
+      /// </summary>
+      /// <param name="revitParameterName">Revit parameter name.</param>
+      /// <returns>The PropertySetEntry.</returns>
+      public static PropertySetEntry CreateVolume(string revitParameterName)
+      {
+         PropertySetEntry pse = new PropertySetEntry(revitParameterName);
+         pse.PropertyType = PropertyType.Volume;
+         return pse;
+      }
+      
       /// <summary>
       /// Creates an entry of type VolumetricFlowRate.
       /// </summary>
@@ -850,10 +872,10 @@ namespace Revit.IFC.Export.Exporter.PropertySet
                         propertyType = PropertyType.Power;
                         break;
                      case ParameterType.ElectricalCurrent:
-                        propertyType = PropertyType.ElectricalCurrent;
+                        propertyType = PropertyType.ElectricCurrent;
                         break;
                      case ParameterType.ElectricalPotential:
-                        propertyType = PropertyType.ElectricalVoltage;
+                        propertyType = PropertyType.ElectricVoltage;
                         break;
                      case ParameterType.ElectricalFrequency:
                         propertyType = PropertyType.Frequency;

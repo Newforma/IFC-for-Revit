@@ -48,12 +48,12 @@ namespace Revit.IFC.Export.Exporter
 
          // Get all the grids from cache and sorted in levels.
          IDictionary<ElementId, List<Grid>> levelGrids = GetAllGrids(exporterIFC);
-
+         
          // Get grids in each level and export.
          foreach (ElementId levelId in levelGrids.Keys)
          {
-            IDictionary<XYZ, List<Grid>> linearGrids = new Dictionary<XYZ, List<Grid>>(new GeometryUtil.XYZComparer());
-            IDictionary<XYZ, List<Grid>> radialGrids = new Dictionary<XYZ, List<Grid>>(new GeometryUtil.XYZComparer());
+            IDictionary<XYZ, List<Grid>> linearGrids = new SortedDictionary<XYZ, List<Grid>>(new GeometryUtil.XYZComparer());
+            IDictionary<XYZ, List<Grid>> radialGrids = new SortedDictionary<XYZ, List<Grid>>(new GeometryUtil.XYZComparer());
             List<Grid> exportedLinearGrids = new List<Grid>();
 
             List<Grid> gridsOneLevel = levelGrids[levelId];
@@ -272,7 +272,7 @@ namespace Revit.IFC.Export.Exporter
                XYZ orig = new XYZ(0.0, 0.0, elevation);
                IFCAnyHandle copyLevelPlacement = ExporterUtil.CopyLocalPlacement(ifcFile, levelObjectPlacement);
                IFCAnyHandle ifcGrid = IFCInstanceExporter.CreateGrid(exporterIFC, gridGUID, ownerHistory, gridName, copyLevelPlacement, productRep, axesU, axesV, axesW);
-               
+
                productWrapper.AddElement(null, ifcGrid, levelInfo, null, true);
 
                transaction.Commit();
@@ -324,13 +324,21 @@ namespace Revit.IFC.Export.Exporter
 
             // Get the handle of curve.
             XYZ projectionDirection = lcs.BasisZ;
-            IFCGeometryInfo info = IFCGeometryInfo.CreateCurveGeometryInfo(exporterIFC, lcs, projectionDirection, false);
-            ExporterIFCUtils.CollectGeometryInfo(exporterIFC, info, grid.Curve, XYZ.Zero, false);
-            IList<IFCAnyHandle> curves = info.GetCurves();
-            if (curves.Count != 1)
-               throw new Exception("IFC: expected 1 curve when export curve element.");
+            IFCAnyHandle axisCurve;
+            if (ExporterCacheManager.ExportOptionsCache.ExportAs4ReferenceView)
+            {
+               axisCurve = GeometryUtil.CreatePolyCurveFromCurve(exporterIFC, grid.Curve, lcs, projectionDirection);
+            }
+            else
+            {
+               IFCGeometryInfo info = IFCGeometryInfo.CreateCurveGeometryInfo(exporterIFC, lcs, projectionDirection, false);
+               ExporterIFCUtils.CollectGeometryInfo(exporterIFC, info, grid.Curve, XYZ.Zero, false);
+               IList<IFCAnyHandle> curves = info.GetCurves();
+               if (curves.Count != 1)
+                  throw new Exception("IFC: expected 1 curve when export curve element.");
 
-            IFCAnyHandle axisCurve = curves[0];
+               axisCurve = curves[0];
+            }
 
             bool sameSense = true;
             if (baseGrid.Curve is Line)
@@ -360,16 +368,19 @@ namespace Revit.IFC.Export.Exporter
                curveWidth = IFCDataUtil.CreateAsPositiveLengthMeasure(width);
             }
 
-            int outColor;
-            int color =
-                (ParameterUtil.GetIntValueFromElement(gridType, BuiltInParameter.GRID_END_SEGMENT_COLOR, out outColor) != null) ? outColor : 0;
-            double blueVal = 0.0;
-            double greenVal = 0.0;
-            double redVal = 0.0;
-            GeometryUtil.GetRGBFromIntValue(color, out blueVal, out greenVal, out redVal);
-            IFCAnyHandle colorHnd = IFCInstanceExporter.CreateColourRgb(ifcFile, null, redVal, greenVal, blueVal);
+            if (!ExporterCacheManager.ExportOptionsCache.ExportAs4ReferenceView)
+            {
+               int outColor;
+               int color =
+                   (ParameterUtil.GetIntValueFromElement(gridType, BuiltInParameter.GRID_END_SEGMENT_COLOR, out outColor) != null) ? outColor : 0;
+               double blueVal = 0.0;
+               double greenVal = 0.0;
+               double redVal = 0.0;
+               GeometryUtil.GetRGBFromIntValue(color, out blueVal, out greenVal, out redVal);
+               IFCAnyHandle colorHnd = IFCInstanceExporter.CreateColourRgb(ifcFile, null, redVal, greenVal, blueVal);
 
-            BodyExporter.CreateCurveStyleForRepItem(exporterIFC, repItemHnd, curveWidth, colorHnd);
+               BodyExporter.CreateCurveStyleForRepItem(exporterIFC, repItemHnd, curveWidth, colorHnd);
+            }
 
             HashSet<IFCAnyHandle> curveSet = new HashSet<IFCAnyHandle>();
             curveSet.Add(repItemHnd);
@@ -445,8 +456,8 @@ namespace Revit.IFC.Export.Exporter
       /// <param name="radialGrids">The radial grids in one level.</param>
       private static void SortGrids(List<Grid> gridsOneLevel, out IDictionary<XYZ, List<Grid>> linearGrids, out IDictionary<XYZ, List<Grid>> radialGrids)
       {
-         linearGrids = new Dictionary<XYZ, List<Grid>>(new GeometryUtil.XYZComparer());
-         radialGrids = new Dictionary<XYZ, List<Grid>>(new GeometryUtil.XYZComparer());
+         linearGrids = new SortedDictionary<XYZ, List<Grid>>(new GeometryUtil.XYZComparer());
+         radialGrids = new SortedDictionary<XYZ, List<Grid>>(new GeometryUtil.XYZComparer());
 
          foreach (Grid grid in gridsOneLevel)
          {

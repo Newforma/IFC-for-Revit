@@ -58,10 +58,9 @@ namespace Revit.IFC.Export.Exporter
       public static void ExportGutter(ExporterIFC exporterIFC, Element element, GeometryElement geometryElement, ProductWrapper productWrapper)
       {
          // Check the intended IFC entity or type name is in the exclude list specified in the UI
-         Common.Enums.IFCEntityType elementClassTypeEnum;
-         if (Enum.TryParse<Common.Enums.IFCEntityType>("IfcPipeSegmentType", out elementClassTypeEnum))
-            if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
-               return;
+         Common.Enums.IFCEntityType elementClassTypeEnum = Common.Enums.IFCEntityType.IfcPipeSegmentType;
+         if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
+            return;
 
          IFCFile file = exporterIFC.GetFile();
 
@@ -95,10 +94,10 @@ namespace Revit.IFC.Export.Exporter
 
                   string typeGuid = GUIDUtil.CreateSubElementGUID(element, (int)IFCHostedSweepSubElements.PipeSegmentType);
                   IFCAnyHandle style = IFCInstanceExporter.CreatePipeSegmentType(file, null, null, repMapList, IFCPipeSegmentType.Gutter);
-						IFCAnyHandleUtil.SetAttribute(style, "Name", elementTypeName);
+                  IFCAnyHandleUtil.OverrideNameAttribute(style, elementTypeName);
 
                   IFCAnyHandleUtil.SetAttribute(style, "Tag", originalTag);
-                  IFCAnyHandleUtil.SetAttribute(style, "GlobalId", typeGuid);
+                  ExporterUtil.SetGlobalId(style, typeGuid);
                   IFCAnyHandleUtil.SetAttribute(style, "ElementType", elementTypeName);
 
                   List<IFCAnyHandle> representationMaps = GeometryUtil.GetRepresentationMaps(style);

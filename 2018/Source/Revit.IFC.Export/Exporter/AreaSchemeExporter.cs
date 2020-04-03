@@ -56,10 +56,9 @@ namespace Revit.IFC.Export.Exporter
             return;
 
          // Check the intended IFC entity or type name is in the exclude list specified in the UI
-         Common.Enums.IFCEntityType elementClassTypeEnum;
-         if (Enum.TryParse<Common.Enums.IFCEntityType>("IfcGroup", out elementClassTypeEnum))
-            if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
-               return;
+         Common.Enums.IFCEntityType elementClassTypeEnum = Common.Enums.IFCEntityType.IfcGroup;
+         if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
+            return;
 
          IFCFile file = exporterIFC.GetFile();
 
@@ -69,7 +68,7 @@ namespace Revit.IFC.Export.Exporter
             IFCAnyHandle ownerHistory = ExporterCacheManager.OwnerHistoryHandle;
             string name = NamingUtil.GetNameOverride(element, element.Name);
             string description = NamingUtil.GetDescriptionOverride(element, null);
-            string objectType = NamingUtil.GetObjectTypeOverride(element, exporterIFC.GetFamilyName());
+            string objectType = NamingUtil.GetObjectTypeOverride(element, NamingUtil.GetFamilyAndTypeName(element));
 
             string elementTag = NamingUtil.CreateIFCElementId(element);
 

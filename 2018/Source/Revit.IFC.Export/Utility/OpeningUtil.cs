@@ -23,6 +23,7 @@ using Autodesk.Revit.DB.IFC;
 using Revit.IFC.Export.Exporter;
 using Revit.IFC.Export.Toolkit;
 using Revit.IFC.Common.Utility;
+using Revit.IFC.Common.Enums;
 using Revit.IFC.Export.Exporter.PropertySet;
 
 namespace Revit.IFC.Export.Utility
@@ -91,9 +92,9 @@ namespace Revit.IFC.Export.Utility
                IFCAnyHandle ownerHistory = ExporterCacheManager.OwnerHistoryHandle;
                string openingName = NamingUtil.GetIFCNamePlusIndex(element, openingNumber++);
                IFCAnyHandle openingElement = IFCInstanceExporter.CreateOpeningElement(exporterIFC, element, guid, ownerHistory,
-                  openingPlacement, openingRep);
-					IFCAnyHandleUtil.SetAttribute(openingElement, "Name", openingName);
-					IFCAnyHandleUtil.SetAttribute(openingElement, "ObjectType", openingObjectType);
+                  openingPlacement, openingRep, allowTag: false);
+               IFCAnyHandleUtil.OverrideNameAttribute(openingElement, openingName);
+               IFCAnyHandleUtil.SetAttribute(openingElement, "ObjectType", openingObjectType);
                wrapper.AddElement(null, openingElement, setter, extraParams, true);
                if (ExporterCacheManager.ExportOptionsCache.ExportBaseQuantities && (extraParams != null))
                   PropertyUtil.CreateOpeningQuantities(exporterIFC, openingElement, extraParams);
@@ -373,9 +374,9 @@ namespace Revit.IFC.Export.Utility
          }
 
          IFCAnyHandle openingHnd = IFCInstanceExporter.CreateOpeningElement(exporterIFC, hostElement, openingGUID, ownerHistory,
-            openingPlacement, prodRep);
-			IFCAnyHandleUtil.SetAttribute(openingHnd, "Name", openingName);
-			IFCAnyHandleUtil.SetAttribute(openingHnd, "ObjectType", openingObjectType);
+            openingPlacement, prodRep, allowTag: false);
+         IFCAnyHandleUtil.OverrideNameAttribute(openingHnd, openingName);
+         IFCAnyHandleUtil.SetAttribute(openingHnd, "ObjectType", openingObjectType);
          if (ExporterCacheManager.ExportOptionsCache.ExportBaseQuantities)
             PropertyUtil.CreateOpeningQuantities(exporterIFC, openingHnd, extrusionCreationData);
 
@@ -435,10 +436,10 @@ namespace Revit.IFC.Export.Utility
          string openingName = NamingUtil.GetNameOverride(insertElement, null);
          if (string.IsNullOrEmpty(openingName))
             openingName = NamingUtil.GetNameOverride(hostElement, NamingUtil.CreateIFCObjectName(exporterIFC, hostElement));
-         IFCAnyHandle openingHnd = IFCInstanceExporter.CreateOpeningElement(exporterIFC, null, openingGUID, ownerHistory, 
-             ExporterUtil.CreateLocalPlacement(file, hostPlacement, null), openingProdRepHnd);
-			IFCAnyHandleUtil.SetAttribute(openingHnd, "Name", openingName);
-			IFCAnyHandleUtil.SetAttribute(openingHnd, "ObjectType", openingObjectType);
+         IFCAnyHandle openingHnd = IFCInstanceExporter.CreateOpeningElement(exporterIFC, null, openingGUID, ownerHistory,
+             ExporterUtil.CreateLocalPlacement(file, hostPlacement, null), openingProdRepHnd, allowTag: false);
+         IFCAnyHandleUtil.OverrideNameAttribute(openingHnd, openingName);
+         IFCAnyHandleUtil.SetAttribute(openingHnd, "ObjectType", openingObjectType);
          IFCExtrusionCreationData ecData = null;
          if (ExporterCacheManager.ExportOptionsCache.ExportBaseQuantities)
          {
@@ -483,9 +484,10 @@ namespace Revit.IFC.Export.Utility
          if (openingElem is FamilyInstance && hostElement is Wall)
          {
             string ifcEnumType;
-            IFCExportType exportType = ExporterUtil.GetExportType(exporterIFC, openingElem, out ifcEnumType);
+            IFCExportInfoPair exportType = ExporterUtil.GetExportType(exporterIFC, openingElem, out ifcEnumType);
             Element instHost = (openingElem as FamilyInstance).Host;
-            return (exportType == IFCExportType.IfcDoorType || exportType == IFCExportType.IfcWindowType) &&
+            return (exportType.ExportInstance == IFCEntityType.IfcDoor || exportType.ExportType == IFCEntityType.IfcDoorType 
+               || exportType.ExportInstance == IFCEntityType.IfcWindow || exportType.ExportType == IFCEntityType.IfcWindowType) &&
                 (instHost != null && instHost.Id == hostElement.Id);
          }
 

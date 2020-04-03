@@ -80,14 +80,14 @@ namespace Revit.IFC.Export.Exporter
       /// </summary>
       private BodyExporterOptions() { }
 
-       /// <summary>
-       /// Collect Material and Profile information for constucting IfcMaterialProfileSet (IFC4)
-       /// </summary>
+      /// <summary>
+      /// Collect Material and Profile information for constucting IfcMaterialProfileSet (IFC4)
+      /// </summary>
       private bool m_CollectMaterialAndProfile = false;
 
-       /// <summary>
-       /// Collect Footprint handle for IfcSlabStandardCase and IfcPlateStandardCase (IFC4)
-       /// </summary>
+      /// <summary>
+      /// Collect Footprint handle for IfcSlabStandardCase and IfcPlateStandardCase (IFC4)
+      /// </summary>
       private bool m_CollectFootprintHandle = false;
 
       /// <summary>
@@ -187,9 +187,10 @@ namespace Revit.IFC.Export.Exporter
          {
             if (m_TessellationControls == null)
             {
+               // Note that, in general, the LevelOfDetail is unused here (it is left at the
+               // default -1).  This needs to be taken into account for routines that
+               // actually need a valid LevelOfDetail value (from 0 to 1), such as Face.Triangulate().
                m_TessellationControls = new SolidOrShellTessellationControls();
-               // Initialize level of detail to a valid value (default is -1, valid range is 0 to 1).
-               m_TessellationControls.LevelOfDetail = ((double)ExporterCacheManager.ExportOptionsCache.LevelOfDetail) / 4.0;
             }
             return m_TessellationControls;
          }
@@ -221,22 +222,22 @@ namespace Revit.IFC.Export.Exporter
          }
       }
 
-       /// <summary>
-       /// Flag to tell whether Material and Profile are to be collected when creating extrusion body. Needed for Ifc*StandardCase (Column, Beam, Member)
-       /// </summary>
-       public bool CollectMaterialAndProfile
+      /// <summary>
+      /// Flag to tell whether Material and Profile are to be collected when creating extrusion body. Needed for Ifc*StandardCase (Column, Beam, Member)
+      /// </summary>
+      public bool CollectMaterialAndProfile
       {
-          get { return m_CollectMaterialAndProfile; }
-          set { m_CollectMaterialAndProfile = value; }
+         get { return m_CollectMaterialAndProfile; }
+         set { m_CollectMaterialAndProfile = value; }
       }
 
-       /// <summary>
-       /// Flag to tell whether Footprint geometry is to be collected for Ifc*StandardCase (Slab, Plate) 
-       /// </summary>
-       public bool CollectFootprintHandle
-       {
-           get { return m_CollectFootprintHandle; }
-           set { m_CollectFootprintHandle = value; }
-       }
+      /// <summary>
+      /// Flag to tell whether Footprint geometry is to be collected for Ifc*StandardCase (Slab, Plate) 
+      /// </summary>
+      public bool CollectFootprintHandle
+      {
+         get { return m_CollectFootprintHandle; }
+         set { m_CollectFootprintHandle = value; }
+      }
    }
 }
