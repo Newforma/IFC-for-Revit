@@ -51,7 +51,7 @@ namespace Revit.IFC.Export.Exporter
          CurveElementType curveElementType = curveElement.CurveElementType;
          bool exported = false;
          if (curveElementType == CurveElementType.ModelCurve || curveElementType == CurveElementType.CurveByPoints)
-               exported = true;
+            exported = true;
 
          if (exported)
          {
@@ -72,7 +72,7 @@ namespace Revit.IFC.Export.Exporter
                   XYZ end1 = curve.GetEndPoint(0);
                   XYZ end2 = curve.GetEndPoint(1);
                   if (end1.IsAlmostEqualTo(end2))
-                        exported = false;
+                     exported = false;
                }
             }
          }
@@ -106,16 +106,19 @@ namespace Revit.IFC.Export.Exporter
             return;
 
          // Check the intended IFC entity or type name is in the exclude list specified in the UI
-         Common.Enums.IFCEntityType elementClassTypeEnum;
-         if (Enum.TryParse<Common.Enums.IFCEntityType>("IfcAnnotation", out elementClassTypeEnum))
-            if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
-               return;
+         Common.Enums.IFCEntityType elementClassTypeEnum = Common.Enums.IFCEntityType.IfcAnnotation;
+         if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
+            return;
 
          IFCFile file = exporterIFC.GetFile();
 
          using (IFCTransaction transaction = new IFCTransaction(file))
          {
-            using (PlacementSetter setter = PlacementSetter.Create(exporterIFC, curveElement))
+            // Check for containment override
+            IFCAnyHandle overrideContainerHnd = null;
+            ElementId overrideContainerId = ParameterUtil.OverrideContainmentParameter(exporterIFC, curveElement, out overrideContainerHnd);
+
+            using (PlacementSetter setter = PlacementSetter.Create(exporterIFC, curveElement, null, null, overrideContainerId, overrideContainerHnd))
             {
                IFCAnyHandle localPlacement = setter.LocalPlacement;
                IFCAnyHandle axisPlacement = GeometryUtil.GetRelativePlacementFromLocalPlacement(localPlacement);
@@ -146,21 +149,26 @@ namespace Revit.IFC.Export.Exporter
                      trf = Transform.CreateTranslation(offsetOrig);
                   }
 
-                  Curve curve = (geometryElement as GeometryObject) as Curve;
-
-                  IList<int> segmentIndex = null;
-                  IList<IList<double>> pointList = GeometryUtil.PointListFromCurve(exporterIFC, curve, trf, null, out segmentIndex);
-
-                  // For now because of no support in creating IfcLineIndex and IfcArcIndex yet, it is set to null
-                  //IList<IList<int>> segmentIndexList = new List<IList<int>>();
-                  //segmentIndexList.Add(segmentIndex);
-                  IList<IList<int>> segmentIndexList = null;
-
-                  IFCAnyHandle pointListHnd = IFCInstanceExporter.CreateCartesianPointList3D(file, pointList);
-                  IFCAnyHandle curveHnd = IFCInstanceExporter.CreateIndexedPolyCurve(file, pointListHnd, segmentIndexList, false);
                   curves = new List<IFCAnyHandle>();
-                  if (!IFCAnyHandleUtil.IsNullOrHasNoValue(curveHnd))
-                     curves.Add(curveHnd);
+                  //Curve curve = (geometryElement as GeometryObject) as Curve;
+                  List<Curve> curvesFromGeomElem = GeometryUtil.GetCurvesFromGeometryElement(geometryElement);
+                  foreach (Curve curve in curvesFromGeomElem)
+                  {
+                     IFCAnyHandle curveHnd = GeometryUtil.CreatePolyCurveFromCurve(exporterIFC, curve, trf);
+                     //IList<int> segmentIndex = null;
+                     //IList<IList<double>> pointList = GeometryUtil.PointListFromCurve(exporterIFC, curve, trf, null, out segmentIndex);
+
+                     //// For now because of no support in creating IfcLineIndex and IfcArcIndex yet, it is set to null
+                     ////IList<IList<int>> segmentIndexList = new List<IList<int>>();
+                     ////segmentIndexList.Add(segmentIndex);
+                     //IList<IList<int>> segmentIndexList = null;
+
+                     //IFCAnyHandle pointListHnd = IFCInstanceExporter.CreateCartesianPointList3D(file, pointList);
+                     //IFCAnyHandle curveHnd = IFCInstanceExporter.CreateIndexedPolyCurve(file, pointListHnd, segmentIndexList, false);
+
+                     if (!IFCAnyHandleUtil.IsNullOrHasNoValue(curveHnd))
+                        curves.Add(curveHnd);
+                  }
                }
                else
                {
@@ -208,21 +216,21 @@ namespace Revit.IFC.Export.Exporter
          }
       }
 
-   /// <summary>
-   ///  Creates a new IfcAnnotation object.
-   /// </summary>
-   /// <param name="exporterIFC">The exporter.</param>
-   /// <param name="curveElement">The curve element.</param>
-   /// <param name="categoryId">The category id.</param>
-   /// <param name="sketchPlaneId">The sketch plane id.</param>
-   /// <param name="curveLCS">The curve local coordinate system.</param>
-   /// <param name="curveStyle">The curve style.</param>
-   /// <param name="placementSetter">The placemenet setter.</param>
-   /// <param name="localPlacement">The local placement.</param>
-   /// <param name="repItemHnd">The representation item.</param>
-   /// <returns>The handle.</returns>
-   static IFCAnyHandle CreateCurveAnnotation(ExporterIFC exporterIFC, Element curveElement, ElementId categoryId, ElementId sketchPlaneId,
-         Transform curveLCS, IFCAnyHandle curveStyle, PlacementSetter placementSetter, IFCAnyHandle localPlacement, IFCAnyHandle repItemHnd)
+      /// <summary>
+      ///  Creates a new IfcAnnotation object.
+      /// </summary>
+      /// <param name="exporterIFC">The exporter.</param>
+      /// <param name="curveElement">The curve element.</param>
+      /// <param name="categoryId">The category id.</param>
+      /// <param name="sketchPlaneId">The sketch plane id.</param>
+      /// <param name="curveLCS">The curve local coordinate system.</param>
+      /// <param name="curveStyle">The curve style.</param>
+      /// <param name="placementSetter">The placemenet setter.</param>
+      /// <param name="localPlacement">The local placement.</param>
+      /// <param name="repItemHnd">The representation item.</param>
+      /// <returns>The handle.</returns>
+      static IFCAnyHandle CreateCurveAnnotation(ExporterIFC exporterIFC, Element curveElement, ElementId categoryId, ElementId sketchPlaneId,
+            Transform curveLCS, IFCAnyHandle curveStyle, PlacementSetter placementSetter, IFCAnyHandle localPlacement, IFCAnyHandle repItemHnd)
       {
          HashSet<IFCAnyHandle> bodyItems = new HashSet<IFCAnyHandle>();
          bodyItems.Add(repItemHnd);
@@ -250,12 +258,12 @@ namespace Revit.IFC.Export.Exporter
          IFCAnyHandle relativePlacement = ExporterUtil.CreateAxis(file, origin, zDir, xDir);
          GeometryUtil.SetRelativePlacement(localPlacement, relativePlacement);
 
-         IFCAnyHandle annotation = IFCInstanceExporter.CreateAnnotation(exporterIFC, curveElement, GUIDUtil.CreateGUID(), 
+         IFCAnyHandle annotation = IFCInstanceExporter.CreateAnnotation(exporterIFC, curveElement, GUIDUtil.CreateGUID(),
             ExporterCacheManager.OwnerHistoryHandle, localPlacement, prodShapeHnd);
 
          return annotation;
       }
-        
+
       /// <summary>
       ///  Adds IfcCurve handles to the IfcAnnotation handle.
       /// </summary>

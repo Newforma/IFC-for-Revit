@@ -28,76 +28,121 @@ using Revit.IFC.Common.Utility;
 
 namespace Revit.IFC.Export.Utility
 {
-    /// <summary>
-    /// Used to keep a cache of a mapping of an ElementId to a handle.
-    /// </summary>
-    public class ElementToHandleCache
-    {
-        /// <summary>
-        /// The dictionary mapping from an ElementId to an  handle. 
-        /// </summary>
-        private Dictionary<ElementId, IFCAnyHandle> m_ElementIdToHandleDictionary = new Dictionary<ElementId, IFCAnyHandle>();
+   /// <summary>
+   /// Used to keep a cache of a mapping of an ElementId to a handle.
+   /// </summary>
+   public class ElementToHandleCache
+   {
+      /// <summary>
+      /// The dictionary mapping from an ElementId to an  handle. 
+      /// </summary>
+      private Dictionary<ElementId, IFCAnyHandle> m_ElementIdToHandleDictionary = new Dictionary<ElementId, IFCAnyHandle>();
+      private Dictionary<ElementId, IFCExportInfoPair> m_ELementIdAndExportType = new Dictionary<ElementId, IFCExportInfoPair>();
 
-        /// <summary>
-        /// Finds the handle from the dictionary.
-        /// </summary>
-        /// <param name="elementId">
-        /// The element elementId.
-        /// </param>
-        /// <returns>
-        /// The handle.
-        /// </returns>
-        public IFCAnyHandle Find(ElementId elementId)
-        {
+      /// <summary>
+      /// Finds the handle from the dictionary.
+      /// </summary>
+      /// <param name="elementId">
+      /// The element elementId.
+      /// </param>
+      /// <returns>
+      /// The handle.
+      /// </returns>
+      public IFCAnyHandle Find(ElementId elementId)
+      {
+         IFCAnyHandle handle = null;
+         if (m_ElementIdToHandleDictionary.TryGetValue(elementId, out handle))
+         {
+            // We need to make sure the handle isn't stale.  If it is, remove it. 
+            if (!IFCAnyHandleUtil.IsValidHandle(handle))
+            {
+               m_ElementIdToHandleDictionary.Remove(elementId);
+               handle = null;
+         }
+         }
+         return handle;
+      }
+
+      /// <summary>
+      /// Find IFCExportInforPair of the Element with the ElementId. Used for applicable Pset
+      /// </summary>
+      /// <param name="elementId">The ElementId</param>
+      /// <returns>return PredefinedType string or null</returns>
+      public IFCExportInfoPair FindPredefinedType(ElementId elementId)
+      {
+         IFCExportInfoPair exportType;
+         if (m_ELementIdAndExportType.TryGetValue(elementId, out exportType))
+         {
+            return exportType;
+         }
+         return null;
+      }
+
+      /// <summary>
+      /// Removes invalid handles from the cache.
+      /// </summary>
+      /// <param name="elementIds">The element ids.</param>
+      /// <param name="expectedType">The expected type of the handles.</param>
+      public void RemoveInvalidHandles(ISet<ElementId> elementIds, IFCEntityType expectedType)
+      {
+         foreach (ElementId elementId in elementIds)
+         {
             IFCAnyHandle handle;
             if (m_ElementIdToHandleDictionary.TryGetValue(elementId, out handle))
             {
-                return handle;
+               try
+               {
+                  bool isType = IFCAnyHandleUtil.IsSubTypeOf(handle, expectedType);
+                  if (!isType)
+                  {
+                     m_ElementIdToHandleDictionary.Remove(elementId);
+                     m_ELementIdAndExportType.Remove(elementId);
+                  }
+               }
+               catch
+               {
+                  m_ElementIdToHandleDictionary.Remove(elementId);
+                  m_ELementIdAndExportType.Remove(elementId);
+               }
             }
-            return null;
-        }
+         }
+      }
 
-        /// <summary>
-        /// Removes invalid handles from the cache.
-        /// </summary>
-        /// <param name="elementIds">The element ids.</param>
-        /// <param name="expectedType">The expected type of the handles.</param>
-        public void RemoveInvalidHandles(ISet<ElementId> elementIds, IFCEntityType expectedType)
-        {
-            foreach (ElementId elementId in elementIds)
-            {
-                IFCAnyHandle handle;
-                if (m_ElementIdToHandleDictionary.TryGetValue(elementId, out handle))
-                {
-                    try
-                    {
-                        bool isType = IFCAnyHandleUtil.IsSubTypeOf(handle, expectedType);
-                        if (!isType)
-                            m_ElementIdToHandleDictionary.Remove(elementId);
-                    }
-                    catch
-                    {
-                        m_ElementIdToHandleDictionary.Remove(elementId);
-                    }
-                }
-            }
-        }
+      /// <summary>
+      /// Adds the handle to the dictionary.
+      /// </summary>
+      /// <param name="elementId">
+      /// The element elementId.
+      /// </param>
+      /// <param name="handle">
+      /// The handle.
+      /// </param>
+      public void Register(ElementId elementId, IFCAnyHandle handle, IFCExportInfoPair exportType = null)
+      {
+         if (m_ElementIdToHandleDictionary.ContainsKey(elementId))
+            return;
 
-        /// <summary>
-        /// Adds the handle to the dictionary.
-        /// </summary>
-        /// <param name="elementId">
-        /// The element elementId.
-        /// </param>
-        /// <param name="handle">
-        /// The handle.
-        /// </param>
-        public void Register(ElementId elementId, IFCAnyHandle handle)
-        {
-            if (m_ElementIdToHandleDictionary.ContainsKey(elementId))
-                return;
+         m_ElementIdToHandleDictionary[elementId] = handle;
+         // Register also handle to elementid cache at the same time in order to make the two caches consistent
+         ExporterCacheManager.HandleToElementCache.Register(handle, elementId);
 
-            m_ElementIdToHandleDictionary[elementId] = handle;
-        }
-    }
+         if (exportType != null)
+            if (!m_ELementIdAndExportType.ContainsKey(elementId))
+               m_ELementIdAndExportType.Add(elementId, exportType);
+      }
+
+      /// <summary>
+      /// Delete an element from the cache
+      /// </summary>
+      /// <param name="element">the element</param>
+      public void Delete(ElementId element)
+      {
+         if (m_ElementIdToHandleDictionary.ContainsKey(element))
+         {
+            IFCAnyHandle handle = m_ElementIdToHandleDictionary[element];
+            m_ElementIdToHandleDictionary.Remove(element);
+            ExporterCacheManager.HandleToElementCache.Delete(handle);
+         }
+      }
+   }
 }

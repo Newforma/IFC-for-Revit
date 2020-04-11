@@ -48,15 +48,11 @@ namespace Revit.IFC.Export.Exporter
       /// </param>
       public static void Export(ExporterIFC exporterIFC, TextNote textNote, ProductWrapper productWrapper)
       {
-         // Entity not allowed in IFC4RV
-         if (ExporterCacheManager.ExportOptionsCache.ExportAs4ReferenceView)
-            return;
-
          // Check the intended IFC entity or type name is in the exclude list specified in the UI
-         Common.Enums.IFCEntityType elementClassTypeEnum;
-         if (Enum.TryParse<Common.Enums.IFCEntityType>("IfcAnnotation", out elementClassTypeEnum))
-            if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
-               return;
+         string predefinedType = null;
+         IFCExportInfoPair exportType = ExporterUtil.GetExportType(exporterIFC, textNote, out predefinedType);
+         if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(exportType.ExportInstance))
+            return;
 
          IFCFile file = exporterIFC.GetFile();
          using (IFCTransaction tr = new IFCTransaction(file))
@@ -135,10 +131,15 @@ namespace Revit.IFC.Export.Exporter
                shapeReps.Add(bodyRepHnd);
 
                IFCAnyHandle prodShapeHnd = IFCInstanceExporter.CreateProductDefinitionShape(file, null, null, shapeReps);
-               IFCAnyHandle annoHnd = IFCInstanceExporter.CreateAnnotation(exporterIFC, textNote, GUIDUtil.CreateGUID(), ExporterCacheManager.OwnerHistoryHandle,
-                  setter.LocalPlacement, prodShapeHnd);
+               IFCAnyHandle instHnd;
+               if (exportType.ExportInstance == Common.Enums.IFCEntityType.IfcAnnotation)
+                  instHnd = IFCInstanceExporter.CreateAnnotation(exporterIFC, textNote, GUIDUtil.CreateGUID(), ExporterCacheManager.OwnerHistoryHandle,
+                     setter.LocalPlacement, prodShapeHnd);
+               else
+                  instHnd = IFCInstanceExporter.CreateGenericIFCEntity(exportType, exporterIFC, textNote, GUIDUtil.CreateGUID(), ExporterCacheManager.OwnerHistoryHandle,
+                     setter.LocalPlacement, prodShapeHnd);
 
-               productWrapper.AddAnnotation(annoHnd, setter.LevelInfo, true);
+               productWrapper.AddAnnotation(instHnd, setter.LevelInfo, true);
             }
 
             tr.Commit();
@@ -230,22 +231,22 @@ namespace Revit.IFC.Export.Exporter
 
          // The center-middle is an odd case; we can deal with it firs
 
-         if(   (HorizontalTextAlignment.Center == textNote.HorizontalAlignment)
-            && (VerticalTextAlignment.Middle == textNote.VerticalAlignment) )
+         if ((HorizontalTextAlignment.Center == textNote.HorizontalAlignment)
+            && (VerticalTextAlignment.Middle == textNote.VerticalAlignment))
          {
             return "center";
          }
 
          string boxAlignment = null;
 
-         switch(textNote.VerticalAlignment)
+         switch (textNote.VerticalAlignment)
          {
             case VerticalTextAlignment.Top:
                yFactor = 1.0;
                boxAlignment = "top-";
                break;
             case VerticalTextAlignment.Middle:
-                  boxAlignment = "middle-";
+               boxAlignment = "middle-";
                break;
             case VerticalTextAlignment.Bottom:
                yFactor = -1.0;
@@ -253,7 +254,7 @@ namespace Revit.IFC.Export.Exporter
                break;
          }
 
-         switch(textNote.HorizontalAlignment)
+         switch (textNote.HorizontalAlignment)
          {
             case HorizontalTextAlignment.Left:
                xFactor = -1.0;

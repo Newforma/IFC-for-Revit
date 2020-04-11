@@ -48,9 +48,9 @@ namespace Revit.IFC.Export.Exporter
       /// </summary>
       ShapeRepresentationType m_RepresentationType = ShapeRepresentationType.Undefined;
 
-       /// <summary>
-       /// Footprint representation info
-       /// </summary>
+      /// <summary>
+      /// Footprint representation info
+      /// </summary>
       FootPrintInfo m_FootprintInfo = null;
 
       /// <summary>
@@ -102,13 +102,13 @@ namespace Revit.IFC.Export.Exporter
          protected set { m_Facets = value; }
       }
 
-       /// <summary>
-       /// Additional representation for the Footprint
-       /// </summary>
-       public FootPrintInfo FootprintInfo
+      /// <summary>
+      /// Additional representation for the Footprint
+      /// </summary>
+      public FootPrintInfo FootprintInfo
       {
-          get { return m_FootprintInfo; }
-          set { m_FootprintInfo = value; }
+         get { return m_FootprintInfo; }
+         set { m_FootprintInfo = value; }
       }
 
       /// <summary>
@@ -147,7 +147,7 @@ namespace Revit.IFC.Export.Exporter
       /// <param name="solid">The solid.</param>
       /// <param name="normal">The normal of the plane that the path lies on.</param>
       /// <returns>The SweptSolidExporter.</returns>
-      public static SweptSolidExporter Create(ExporterIFC exporterIFC, Element element, SimpleSweptSolidAnalyzer sweptAnalyzer, GeometryObject geomObject, GenerateAdditionalInfo addInfo=GenerateAdditionalInfo.None)
+      public static SweptSolidExporter Create(ExporterIFC exporterIFC, Element element, SimpleSweptSolidAnalyzer sweptAnalyzer, GeometryObject geomObject, GenerateAdditionalInfo addInfo = GenerateAdditionalInfo.None)
       {
          try
          {
@@ -181,13 +181,13 @@ namespace Revit.IFC.Export.Exporter
                Transform lcs = GeometryUtil.CreateTransformFromPlanarFace(sweptAnalyzer.ProfileFace);
                sweptSolidExporter.RepresentationItem = ExtrusionExporter.CreateExtrudedSolidFromCurveLoop(exporterIFC, profileName, faceBoundaries, lcs,
                    line.Direction, UnitUtil.ScaleLength(line.Length), false);
-                if ((addInfo & GenerateAdditionalInfo.GenerateFootprint) != 0)
-                {
+               if ((addInfo & GenerateAdditionalInfo.GenerateFootprint) != 0)
+               {
                   FootPrintInfo fInfo = new FootPrintInfo();
                   fInfo.LCSTransformUsed = lcs;
                   fInfo.FootPrintHandle = GeometryUtil.CreateIFCCurveFromCurveLoop(exporterIFC, faceBoundaries[0], lcs, line.Direction);
-                  sweptSolidExporter.FootprintInfo = fInfo; 
-                }
+                  sweptSolidExporter.FootprintInfo = fInfo;
+               }
             }
             else
             {
@@ -195,11 +195,11 @@ namespace Revit.IFC.Export.Exporter
                if (ExporterCacheManager.ExportOptionsCache.ExportAs4)
                {
                   // Use tessellated geometry in IFC Reference View
-                  if (ExporterCacheManager.ExportOptionsCache.ExportAs4ReferenceView)
+                  if (ExporterCacheManager.ExportOptionsCache.ExportAs4ReferenceView || ExporterCacheManager.ExportOptionsCache.ExportAs4General)
                   {
                      // TODO: Create CreateSimpleSweptSolidAsTessellation routine that takes advantage of the superior tessellation of this class.
                      BodyExporterOptions options = new BodyExporterOptions(false, ExportOptionsCache.ExportTessellationLevel.ExtraLow);
-                     sweptSolidExporter.RepresentationItem = BodyExporter.ExportBodyAsTessellatedFaceSet(exporterIFC, element, options, geomObject);
+                     sweptSolidExporter.RepresentationItem = BodyExporter.ExportBodyAsTessellatedFaceSet(exporterIFC, element, options, geomObject)[0];
                      sweptSolidExporter.RepresentationType = ShapeRepresentationType.Tessellation;
                   }
                   else
@@ -575,23 +575,33 @@ namespace Revit.IFC.Export.Exporter
          // If that changes, we should revisit optimization possibilities.
          Transform profilePlaneTrfInverse = profilePlaneTrf.Inverse;
 
+         IList<IList<XYZ>> projectedTessellatedOutline = new List<IList<XYZ>>();
+         foreach (IList<XYZ> pointLoop in tessellatedOutline)
+         {
+            IList<XYZ> projectedPointLoop = new List<XYZ>();
+            foreach (XYZ point in pointLoop)
+            {
+               projectedPointLoop.Add(profilePlaneTrfInverse.OfPoint(point));
+            }
+            projectedTessellatedOutline.Add(projectedPointLoop);
+         }
+
          // Create the delta transforms and the offset tessellated profiles.
          foreach (double parameter in tessellatedDirectrixParameters)
          {
             Transform directrixDirs = CreateProfileCurveTransform(exporterIFC, directrix, parameter);
-            Transform deltaTransform = directrixDirs.Multiply(profilePlaneTrfInverse);
 
             IList<IList<IFCAnyHandle>> currTessellatedOutline = new List<IList<IFCAnyHandle>>();
-            foreach (IList<XYZ> pointLoop in tessellatedOutline)
+            foreach (IList<XYZ> projectedPointLoop in projectedTessellatedOutline)
             {
-               IList<IFCAnyHandle> currTessellatedPoinLoop = new List<IFCAnyHandle>();
-               foreach (XYZ point in pointLoop)
+               IList<IFCAnyHandle> currTessellatedPointLoop = new List<IFCAnyHandle>();
+               foreach (XYZ projectedPoint in projectedPointLoop)
                {
-                  XYZ transformedPoint = deltaTransform.OfPoint(point);
+                  XYZ transformedPoint = directrixDirs.OfPoint(projectedPoint);
                   IFCAnyHandle transformedPointHandle = ExporterUtil.CreateCartesianPoint(file, transformedPoint);
-                  currTessellatedPoinLoop.Add(transformedPointHandle);
+                  currTessellatedPointLoop.Add(transformedPointHandle);
                }
-               currTessellatedOutline.Add(currTessellatedPoinLoop);
+               currTessellatedOutline.Add(currTessellatedPointLoop);
             }
             facetVertexHandles.Add(currTessellatedOutline);
          }

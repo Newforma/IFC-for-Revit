@@ -17,15 +17,45 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+/*
+// ANTLR 4 License
+// [The BSD License]
+// Copyright (c) 2012 Terence Parr and Sam Harwell
+// All rights reserved.
+// Redistribution and use in source and binary forms, with or without modification, 
+// are permitted provided that the following conditions are met:
+// 
+// Redistributions of source code must retain the above copyright notice, this list of conditions 
+// and the following disclaimer.
+// Redistributions in binary form must reproduce the above copyright notice, this list of 
+// conditions and the following disclaimer in the documentation and/or other materials provided 
+// with the distribution.
+// Neither the name of the author nor the names of its contributors may be used to endorse or 
+// promote products derived from this software without specific prior written permission.
+// 
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS 
+// OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY 
+// AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR 
+// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY 
+// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR 
+// OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+// POSSIBILITY OF SUCH DAMAGE.
+*/
+
 grammar ParamExprGrammar;
+
 @header {
-#pragma warning disable 3021
+   #pragma warning disable 3021
 }
 
 @lexer::members
 {
-	public static int WHITESPACE = 1;
-	public static int COMMENTS = 2;
+// NOTE: If WHITESPACE is changed from 1, please also change the following line below:
+// WS:				[ \t\n\r]+ -> channel(1) ;
+// This is hardwired to 1 (instead of WHITESPACE) to avoid a compiler warning.
+   public const int WHITESPACE = 1;
 }
 
 /*
@@ -81,12 +111,14 @@ NUMBER:			INT '.' INT? EXP?   // 1.35, 1.35E-9, 0.3
 				   | INT EXP?            // 1e10
 				   | INT                // 45
 				   ;
+INT:    INT_DIGITS; 
 fragment ALPHANUMERIC:          [a-zA-Z0-9_] ;
 fragment ESC:			'\\' (["\\/bfnrt] | UNICODE) ;
 fragment UNICODE :		'u' HEX HEX HEX HEX ;
 fragment HEX :			[0-9a-fA-F] ;
-fragment NAMEWITHSPECIALCHAR:   [a-zA-Z0-9&*%^@!_=+-/.,];
-fragment INT:                   [0] | [0-9] [0-9]* ; 
+fragment NAMEWITHSPECIALCHAR:   [a-zA-Z0-9&*%^@!_=+/.,\-];
+fragment INT_DIGITS:                   [0] | [0-9] [0-9]* ; 
 fragment EXP:                   [Ee] [+\-]? INT ; 
 
-WS:				[ \t\n\r]+ -> channel(WHITESPACE) ;
+// warning AC0177: 'WHITESPACE' is not a recognized channel name
+WS:				[ \t\n\r]+ -> channel(1) ;

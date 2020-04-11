@@ -29,70 +29,105 @@ using Revit.IFC.Export.Utility;
 
 namespace Revit.IFC.Export.Exporter.PropertySet.Calculators
 {
-    /// <summary>
-    /// A calculation class to calculate the shape code for a rebar.
-    /// </summary>
-    class ISOCD3766ShapeCodeCalculator : PropertyCalculator
-    {
-        /// <summary>
-        /// A string variable to keep the calculated value.
-        /// </summary>
-        private string m_ShapeCode = null;
+   /// <summary>
+   /// A calculation class to calculate the shape code for a rebar.
+   /// </summary>
+   class ISOCD3766ShapeCodeCalculator : PropertyCalculator
+   {
+      /// <summary>
+      /// A string variable to keep the calculated value.
+      /// </summary>
+      private string m_ShapeCode = null;
 
-        /// <summary>
-        /// A static instance of this class.
-        /// </summary>
-        static ISOCD3766ShapeCodeCalculator s_Instance = new ISOCD3766ShapeCodeCalculator();
+      /// <summary>
+      /// A static instance of this class.
+      /// </summary>
+      static ISOCD3766ShapeCodeCalculator s_Instance = new ISOCD3766ShapeCodeCalculator();
 
-        /// <summary>
-        /// The ISOCD3766ShapeCodeCalculator instance.
-        /// </summary>
-        public static ISOCD3766ShapeCodeCalculator Instance
-        {
-            get { return s_Instance; }
-        }
+      /// <summary>
+      /// The ISOCD3766ShapeCodeCalculator instance.
+      /// </summary>
+      public static ISOCD3766ShapeCodeCalculator Instance
+      {
+         get { return s_Instance; }
+      }
 
-        /// <summary>
-        /// Determines if the calculator allows string values to be cached.
-        /// </summary>
-        public override bool CacheStringValues
-        {
-            get { return true; }
-        }
+      /// <summary>
+      /// Determines if the calculator allows string values to be cached.
+      /// </summary>
+      public override bool CacheStringValues
+      {
+         get { return true; }
+      }
 
-        /// <summary>
-        /// Calculates the shape code for a rebar.
-        /// </summary>
-        /// <param name="exporterIFC">The ExporterIFC object.</param>
-        /// <param name="extrusionCreationData">The IFCExtrusionCreationData.</param>
-        /// <param name="element">The element to calculate the value.</param>
-        /// <param name="elementType">The element type.</param>
-        /// <returns>
-        /// True if the operation succeed, false otherwise.
-        /// </returns>
-        public override bool Calculate(ExporterIFC exporterIFC, IFCExtrusionCreationData extrusionCreationData, Element element, ElementType elementType)
-        {
-            ElementId rebarShapeId;
-            if (ParameterUtil.GetElementIdValueFromElement(element, BuiltInParameter.REBAR_SHAPE, out rebarShapeId) == null)
-                return false;
+      /// <summary>
+      /// Calculates the shape code for a rebar.
+      /// </summary>
+      /// <param name="exporterIFC">The ExporterIFC object.</param>
+      /// <param name="extrusionCreationData">The IFCExtrusionCreationData.</param>
+      /// <param name="element">The element to calculate the value.</param>
+      /// <param name="elementType">The element type.</param>
+      /// <returns>
+      /// True if the operation succeed, false otherwise.
+      /// </returns>
+      public override bool Calculate(ExporterIFC exporterIFC, IFCExtrusionCreationData extrusionCreationData, Element element, ElementType elementType)
+      {
+         ElementId rebarShapeId;
+         if (ParameterUtil.GetElementIdValueFromElement(element, BuiltInParameter.REBAR_SHAPE, out rebarShapeId) == null)
+            return false;
 
-            Element rebarShape = element.Document.GetElement(rebarShapeId);
+         Element rebarShape = element.Document.GetElement(rebarShapeId);
+         if (rebarShape == null)
+            return false;
+
+         m_ShapeCode = rebarShape.Name;
+         return true;
+      }
+
+
+      /// <summary>
+      /// Calculates the shape code for a rebar subelement, from the subelement cache. This is used for Free Form Rebar when the Workshop intructions are Bent.
+      /// <param name="element">
+      /// The element to calculate the value.
+      /// </param>
+      /// <param name="handle">
+      /// The IFC handle that may offer parameter overrides.
+      /// </param>
+      /// <returns>
+      /// True if the operation succeed, false otherwise.
+      /// </returns>
+      public override bool GetParameterFromSubelementCache(Element element, IFCAnyHandle handle)
+      {
+         Parameter param = element.get_Parameter(BuiltInParameter.REBAR_SHAPE);
+         if (param == null)
+            return false;
+
+         if (param.Definition == null)
+            return false;
+
+         ElementIdParameterValue paramVal = ParameterUtil.getParameterValueByNameFromSubelementCache(element.Id, handle, param.Definition.Name) as ElementIdParameterValue;
+         if (paramVal != null)
+         {
+            Element rebarShape = element.Document.GetElement(paramVal.Value);
             if (rebarShape == null)
-                return false;
+               return false;
 
             m_ShapeCode = rebarShape.Name;
-            return true;
-        }
 
-        /// <summary>
-        /// Gets the calculated string value.
-        /// </summary>
-        /// <returns>
-        /// The string value.
-        /// </returns>
-        public override string GetStringValue()
-        {
-            return m_ShapeCode;
-        }
-    }
+            return true;
+         }
+         return false;
+      }
+
+      /// <summary>
+      /// Gets the calculated string value.
+      /// </summary>
+      /// <returns>
+      /// The string value.
+      /// </returns>
+      public override string GetStringValue()
+      {
+         return m_ShapeCode;
+      }
+   }
 }

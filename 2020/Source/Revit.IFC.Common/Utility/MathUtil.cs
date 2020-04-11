@@ -51,10 +51,15 @@ namespace Revit.IFC.Common.Utility
       /// </returns>
       public static bool IsAlmostEqual(double d1, double d2)
       {
+         return IsAlmostEqual(d1, d2, Eps());
+      }
+
+      public static bool IsAlmostEqual(double d1, double d2, double eps)
+      {
          double sum = Math.Abs(d1) + Math.Abs(d2);
-         if (sum < Eps())
+         if (sum < eps)
             return true;
-         return (Math.Abs(d1 - d2) <= sum * Eps());
+         return (Math.Abs(d1 - d2) <= sum * eps);
       }
 
       /// <summary>
@@ -117,9 +122,9 @@ namespace Revit.IFC.Common.Utility
          range[1] = midRange + halfPeriod;
 
          double shiftCountAsDouble = 0.0;
-         if (number < range[0])
+         if (number < range[0] && !MathUtil.IsAlmostEqual(number, range[0]))
             shiftCountAsDouble += (1.0 + Math.Floor((range[0] - number) / period));
-         if (number >= range[1])
+         if (number >= range[1] && !MathUtil.IsAlmostEqual(number, range[1]))
             shiftCountAsDouble -= (1.0 + Math.Floor((number - range[1]) / period));
 
          number += period * shiftCountAsDouble;

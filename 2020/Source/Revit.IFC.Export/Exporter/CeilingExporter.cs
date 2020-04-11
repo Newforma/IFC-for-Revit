@@ -24,6 +24,7 @@ using Autodesk.Revit.DB.IFC;
 using Revit.IFC.Common.Utility;
 using Revit.IFC.Export.Utility;
 using Revit.IFC.Export.Toolkit;
+using Revit.IFC.Common.Enums;
 
 namespace Revit.IFC.Export.Exporter
 {
@@ -69,17 +70,20 @@ namespace Revit.IFC.Export.Exporter
             return;
 
          // Check the intended IFC entity or type name is in the exclude list specified in the UI
-         Common.Enums.IFCEntityType elementClassTypeEnum;
-         if (Enum.TryParse<Common.Enums.IFCEntityType>("IfcCovering", out elementClassTypeEnum))
-            if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
-               return;
+         Common.Enums.IFCEntityType elementClassTypeEnum = Common.Enums.IFCEntityType.IfcCovering;
+         if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
+            return;
 
          ElementType elemType = element.Document.GetElement(element.GetTypeId()) as ElementType;
          IFCFile file = exporterIFC.GetFile();
 
          using (IFCTransaction transaction = new IFCTransaction(file))
          {
-            using (PlacementSetter setter = PlacementSetter.Create(exporterIFC, element))
+            // Check for containment override
+            IFCAnyHandle overrideContainerHnd = null;
+            ElementId overrideContainerId = ParameterUtil.OverrideContainmentParameter(exporterIFC, element, out overrideContainerHnd);
+
+            using (PlacementSetter setter = PlacementSetter.Create(exporterIFC, element, null, null, overrideContainerId, overrideContainerHnd))
             {
                using (IFCExtrusionCreationData ecData = new IFCExtrusionCreationData())
                {
@@ -112,7 +116,7 @@ namespace Revit.IFC.Export.Exporter
                      defaultCoveringEnumType = "ROOFING";
 
                   string instanceGUID = GUIDUtil.CreateGUID(element);
-                  string coveringType = IFCValidateEntry.GetValidIFCType(element, ifcEnumType, defaultCoveringEnumType);
+                  string coveringType = IFCValidateEntry.GetValidIFCPredefinedTypeType(/*element,*/ ifcEnumType, defaultCoveringEnumType, "IfcCoveringType");
 
                   IFCAnyHandle covering = IFCInstanceExporter.CreateCovering(exporterIFC, element, instanceGUID, ExporterCacheManager.OwnerHistoryHandle,
                       setter.LocalPlacement, prodRep, coveringType);
@@ -121,6 +125,10 @@ namespace Revit.IFC.Export.Exporter
                   {
                      PartExporter.ExportHostPart(exporterIFC, element, covering, productWrapper, setter, setter.LocalPlacement, null);
                   }
+
+                  IFCExportInfoPair exportInfo = new IFCExportInfoPair(IFCEntityType.IfcCovering, IFCEntityType.IfcCoveringType, coveringType);
+                  IFCAnyHandle typeHnd = ExporterUtil.CreateGenericTypeFromElement(element, exportInfo, file, ExporterCacheManager.OwnerHistoryHandle, coveringType, productWrapper);
+                  ExporterCacheManager.TypeRelationsCache.Add(typeHnd, covering);
 
                   bool containInSpace = false;
                   IFCAnyHandle localPlacementToUse = setter.LocalPlacement;
@@ -133,7 +141,7 @@ namespace Revit.IFC.Export.Exporter
                      // Process Ceiling to be contained in a Space only when it is exactly bounding one Space
                      if (roomlist.Count == 1)
                      {
-                        productWrapper.AddElement(element, covering, setter, null, false);
+                        productWrapper.AddElement(element, covering, setter, null, false, exportInfo);
 
                         // Modify the Ceiling placement to be relative to the Space that it bounds 
                         IFCAnyHandle roomPlacement = IFCAnyHandleUtil.GetObjectPlacement(ExporterCacheManager.SpaceInfoCache.FindSpaceHandle(roomlist[0]));
@@ -150,7 +158,7 @@ namespace Revit.IFC.Export.Exporter
 
                   // if not contained in Space, assign it to default containment in Level
                   if (!containInSpace)
-                     productWrapper.AddElement(element, covering, setter, null, true);
+                     productWrapper.AddElement(element, covering, setter, null, true, exportInfo);
 
                   if (!exportParts)
                   {

@@ -19,8 +19,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 using Autodesk.Revit.ApplicationServices;
 using Autodesk.Revit.DB;
@@ -53,6 +51,12 @@ namespace Revit.IFC.Export.Utility
       static public IFCAnyHandle BuildingHandle { get; set; }
 
       /// <summary>
+      /// A cache to keep track of what beams can be exported as extrusions.
+      /// Strictly for performance issues.
+      /// </summary>
+      static IDictionary<ElementId, bool> m_CanExportBeamGeometryAsExtrusionCache;
+
+      /// <summary>
       /// Cache the values of the IFC entity class from the IFC Export table by category.
       /// </summary>
       static Dictionary<KeyValuePair<ElementId, int>, string> m_CategoryClassNameCache;
@@ -73,6 +77,7 @@ namespace Revit.IFC.Export.Utility
       /// </summary>
       static ClassificationLocationCache m_ClassificationLocationCache;
 
+      static ClassificationReferenceCache m_ClassificationReferenceCache;
       /// <summary>
       /// The ContainmentCache object.
       /// </summary>
@@ -102,6 +107,11 @@ namespace Revit.IFC.Export.Utility
       /// The ElementToHandleCache cache.
       /// </summary>
       static ElementToHandleCache m_ElementToHandleCache;
+
+      /// <summary>
+      /// The ElementTypeToHandleCache cache
+      /// </summary>
+      static ElementTypeToHandleCache m_ElementTypeToHandleCache;
 
       ///<summary>
       /// The ExportOptions cache.
@@ -150,7 +160,7 @@ namespace Revit.IFC.Export.Utility
       /// <summary>
       /// The MaterialHandleCache object.
       /// </summary>
-      static MaterialHandleCache m_MaterialHandleCache;
+      static ElementToHandleCache m_MaterialHandleCache;
 
       /// <summary>
       /// The MaterialConsituent object cache (starting IFC4)
@@ -327,7 +337,7 @@ namespace Revit.IFC.Export.Utility
       /// The common property sets to be exported for an entity type, conditional on the Object Type of the
       /// entity matching that of the PropertySetDescription.
       /// </summary>
-      static IDictionary<IFCEntityType, IList<PropertySetDescription>> m_ConditionalPropertySetsForTypeCache;
+      //static IDictionary<IFCEntityType, IList<PropertySetDescription>> m_ConditionalPropertySetsForTypeCache;
 
       /// <summary>
       /// The material id to style handle cache.
@@ -338,7 +348,7 @@ namespace Revit.IFC.Export.Utility
       /// A list of elements contained in assemblies, to be removed from the level spatial structure.
       /// </summary>
       static ISet<IFCAnyHandle> m_ElementsInAssembliesCache;
-        
+
       /// <summary>
       /// The default IfcCartesianTransformationOperator3D, scale 1.0 and origin =  { 0., 0., 0. };
       /// </summary>
@@ -368,11 +378,11 @@ namespace Revit.IFC.Export.Utility
       /// This is redundant with a native list that is being deprecated, which has inadequate API access.
       /// </summary>
       static IDictionary<ElementId, int> m_HostObjectsLevelIndex;
-        
-      /// <summary>
-      /// The ElementToTypeCache cache that maps Revit element type id to the IFC element type handle.
-      /// </summary>
-      static ElementToHandleCache m_ElementTypeToHandleCache;
+
+      ///// <summary>
+      ///// The ElementToTypeCache cache that maps Revit element type id to the IFC element type handle.
+      ///// </summary>
+      //static ElementToHandleCache m_ElementTypeToHandleCache;
 
       /// <summary>
       /// Keeps relationship of Ceiling to the Space(s) where it belongs to. Used to determine Space containment for Ceiling object that is fully contained in Space (for FMHandOverView)
@@ -393,6 +403,13 @@ namespace Revit.IFC.Export.Utility
       /// The PropertyMapCache
       /// </summary>
       static IDictionary<Tuple<string, string>, string> m_PropertyMapCache;
+
+      /// <summary>
+      /// The CertifiedEntitiesAndPsetCache
+      /// </summary>
+      static IFCCertifiedEntitiesAndPSets m_CertifiedEntitiesAndPsetCache;
+
+      static HashSet<IFCAnyHandle> m_HandleToDelete;
 
       /// <summary>
       /// The ParameterCache object.
@@ -417,6 +434,20 @@ namespace Revit.IFC.Export.Utility
             if (m_AssemblyInstanceCache == null)
                m_AssemblyInstanceCache = new AssemblyInstanceCache();
             return m_AssemblyInstanceCache;
+         }
+      }
+
+      /// <summary>
+      /// A cache to keep track of what beams can be exported as extrusions.
+      /// Strictly for performance issues.
+      /// </summary>
+      public static IDictionary<ElementId, bool> CanExportBeamGeometryAsExtrusionCache
+      {
+         get
+         {
+            if (m_CanExportBeamGeometryAsExtrusionCache == null)
+               m_CanExportBeamGeometryAsExtrusionCache = new Dictionary<ElementId, bool>();
+            return m_CanExportBeamGeometryAsExtrusionCache;
          }
       }
 
@@ -691,7 +722,7 @@ namespace Revit.IFC.Export.Utility
             return m_MEPCache;
          }
       }
-        
+
 
       /// <summary>
       /// The SpaceBoundaryCache object.
@@ -735,12 +766,12 @@ namespace Revit.IFC.Export.Utility
       /// <summary>
       /// The MaterialHandleCache object.
       /// </summary>
-      public static MaterialHandleCache MaterialHandleCache
+      public static ElementToHandleCache MaterialHandleCache
       {
          get
          {
             if (m_MaterialHandleCache == null)
-               m_MaterialHandleCache = new MaterialHandleCache();
+               m_MaterialHandleCache = new ElementToHandleCache();
             return m_MaterialHandleCache;
          }
       }
@@ -758,15 +789,15 @@ namespace Revit.IFC.Export.Utility
       //   }
       //}
 
-   public static MaterialConstituentSetCache MaterialConstituentSetCache
-   {
-      get
+      public static MaterialConstituentSetCache MaterialConstituentSetCache
       {
-         if (m_MaterialConstituentSetCache == null)
-            m_MaterialConstituentSetCache = new MaterialConstituentSetCache();
-         return m_MaterialConstituentSetCache;
+         get
+         {
+            if (m_MaterialConstituentSetCache == null)
+               m_MaterialConstituentSetCache = new MaterialConstituentSetCache();
+            return m_MaterialConstituentSetCache;
+         }
       }
-   }
 
       /// <summary>
       /// The MaterialRelationsCache object.
@@ -912,9 +943,9 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
-   /// The FamilySymbolToTypeInfoCache object.  This maps a FamilySymbol id to the related created IFC information (the TypeObjectsCache).
+      /// The FamilySymbolToTypeInfoCache object.  This maps a FamilySymbol id to the related created IFC information (the TypeObjectsCache).
       /// </summary>
-   public static TypeObjectsCache FamilySymbolToTypeInfoCache
+      public static TypeObjectsCache FamilySymbolToTypeInfoCache
       {
          get
          {
@@ -964,7 +995,7 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
-   /// The ElementToHandleCache object, used to cache Revit element ids to IFC entity handles.
+      /// The ElementToHandleCache object, used to cache Revit element ids to IFC entity handles.
       /// </summary>
       public static ElementToHandleCache ElementToHandleCache
       {
@@ -977,19 +1008,19 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
-   /// The ElementTypeToHandleCache object, used to cache Revit element type ids to IFC entity handles.
-   /// </summary>
-   public static ElementToHandleCache ElementTypeToHandleCache
-   {
-      get
+      /// The ElementTypeToHandleCache object, used to cache Revit element type ids to IFC entity handles.
+      /// </summary>
+      public static ElementTypeToHandleCache ElementTypeToHandleCache
       {
-         if (m_ElementTypeToHandleCache == null)
-            m_ElementTypeToHandleCache = new ElementToHandleCache();
-         return m_ElementTypeToHandleCache;
+         get
+         {
+            if (m_ElementTypeToHandleCache == null)
+               m_ElementTypeToHandleCache = new ElementTypeToHandleCache();
+            return m_ElementTypeToHandleCache;
+         }
       }
-   }
 
-   /// <summary>
+      /// <summary>
       /// The ExportOptionsCache object.
       /// </summary>
       public static ExportOptionsCache ExportOptionsCache
@@ -1035,6 +1066,17 @@ namespace Revit.IFC.Export.Utility
             return m_ClassificationLocationCache;
          }
          set { m_ClassificationLocationCache = value; }
+      }
+
+      public static ClassificationReferenceCache ClassificationReferenceCache
+      {
+         get
+         {
+            if (m_ClassificationReferenceCache == null)
+               m_ClassificationReferenceCache = new ClassificationReferenceCache();
+            return m_ClassificationReferenceCache;
+         }
+         set { m_ClassificationReferenceCache = value; }
       }
 
       /// <summary>
@@ -1115,7 +1157,7 @@ namespace Revit.IFC.Export.Utility
             return m_PropertyInfoCache;
          }
       }
-        
+
       /// <summary>
       /// The common property sets to be exported for an entity type, regardless of Object Type.
       /// </summary>
@@ -1133,15 +1175,15 @@ namespace Revit.IFC.Export.Utility
       /// The common property sets to be exported for an entity type, conditional on the Object Type of the
       /// entity matching that of the PropertySetDescription.
       /// </summary>
-      public static IDictionary<IFCEntityType, IList<PropertySetDescription>> ConditionalPropertySetsForTypeCache
-      {
-         get
-         {
-            if (m_ConditionalPropertySetsForTypeCache == null)
-               m_ConditionalPropertySetsForTypeCache = new Dictionary<IFCEntityType, IList<PropertySetDescription>>();
-            return m_ConditionalPropertySetsForTypeCache;
-         }
-      }
+      //public static IDictionary<IFCEntityType, IList<PropertySetDescription>> ConditionalPropertySetsForTypeCache
+      //{
+      //   get
+      //   {
+      //      if (m_ConditionalPropertySetsForTypeCache == null)
+      //         m_ConditionalPropertySetsForTypeCache = new Dictionary<IFCEntityType, IList<PropertySetDescription>>();
+      //      return m_ConditionalPropertySetsForTypeCache;
+      //   }
+      //}
 
       /// <summary>
       /// The material id to style handle cache.
@@ -1261,6 +1303,30 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
+      /// The CertifiedEntitiesAndPsetCache
+      /// </summary>
+      public static IFCCertifiedEntitiesAndPSets CertifiedEntitiesAndPsetsCache
+      {
+         get
+         {
+            if (m_CertifiedEntitiesAndPsetCache == null)
+               m_CertifiedEntitiesAndPsetCache = new IFCCertifiedEntitiesAndPSets();
+
+            return m_CertifiedEntitiesAndPsetCache;
+         }
+      }
+
+      public static HashSet<IFCAnyHandle> HandleToDeleteCache
+      {
+         get
+         {
+            if (m_HandleToDelete == null)
+               m_HandleToDelete = new HashSet<IFCAnyHandle>();
+            return m_HandleToDelete;
+         }
+      }
+
+      /// <summary>
       /// Clear all caches contained in this manager.
       /// </summary>
       public static void Clear()
@@ -1273,12 +1339,14 @@ namespace Revit.IFC.Export.Utility
          m_AreaSchemeCache = null;
          m_AssemblyInstanceCache = null;
          m_BeamSystemCache = null;
+         m_CanExportBeamGeometryAsExtrusionCache = null;
          m_CategoryClassNameCache = null;
          m_CategoryTypeCache = null;
          m_CeilingSpaceRelCache = null;
          m_ClassificationCache = null;
          m_ClassificationLocationCache = null;
-         m_ConditionalPropertySetsForTypeCache = null;
+         m_ClassificationReferenceCache = null;
+         //m_ConditionalPropertySetsForTypeCache = null;
          m_ContainmentCache = null;
          m_CurveAnnotationCache = null;
          m_DBViewsToExport = null;
@@ -1335,6 +1403,8 @@ namespace Revit.IFC.Export.Utility
          m_ZoneCache = null;
          m_ZoneInfoCache = null;
          BuildingHandle = null;
+         m_CertifiedEntitiesAndPsetCache = null;
+         m_HandleToDelete = null;
       }
    }
 }

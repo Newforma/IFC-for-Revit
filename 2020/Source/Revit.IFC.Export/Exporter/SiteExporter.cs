@@ -45,7 +45,37 @@ namespace Revit.IFC.Export.Exporter
       /// <param name="productWrapper">The ProductWrapper.</param>
       public static void ExportTopographySurface(ExporterIFC exporterIFC, TopographySurface topoSurface, GeometryElement geometryElement, ProductWrapper productWrapper)
       {
-         ExportSiteBase(exporterIFC, null, topoSurface, geometryElement, productWrapper);
+         // Skip if the element is already processed and the Site has been created before
+         if (!IFCAnyHandleUtil.IsNullOrHasNoValue(ExporterCacheManager.SiteHandle) && !IFCAnyHandleUtil.IsNullOrHasNoValue(ExporterCacheManager.ElementToHandleCache.Find(topoSurface.Id)))
+            return;
+
+         string ifcEnumType;
+         IFCExportInfoPair exportType = ExporterUtil.GetExportType(exporterIFC, topoSurface, out ifcEnumType);
+
+         // Check the intended IFC entity or type name is in the exclude list specified in the UI
+         Common.Enums.IFCEntityType elementClassTypeEnum;
+
+         if (Enum.TryParse<Common.Enums.IFCEntityType>(exportType.ExportInstance.ToString(), out elementClassTypeEnum)
+               || Enum.TryParse<Common.Enums.IFCEntityType>(exportType.ExportType.ToString(), out elementClassTypeEnum))
+         {
+            if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
+               return;
+
+            if (elementClassTypeEnum == Common.Enums.IFCEntityType.IfcSite)
+               ExportSiteBase(exporterIFC, topoSurface.Document, topoSurface, geometryElement, productWrapper);
+            else
+            {
+               // Export Default Site first before exporting the TopographySurface as a generic element
+               ExportDefaultSite(exporterIFC, topoSurface.Document, productWrapper);
+               using (ProductWrapper genElemProductWrapper = ProductWrapper.Create(exporterIFC, true))
+               {
+                  GenericElementExporter.ExportGenericElement(exporterIFC, topoSurface, geometryElement, genElemProductWrapper, exportType);
+               }
+               productWrapper.ClearInternalHandleWrapperData(topoSurface.Document.ProjectInformation);
+            }
+         }
+         else
+            ExportSiteBase(exporterIFC, null, topoSurface, geometryElement, productWrapper);
       }
 
       /// <summary>
@@ -91,10 +121,9 @@ namespace Revit.IFC.Export.Exporter
          }
 
          // Check the intended IFC entity or type name is in the exclude list specified in the UI
-         Common.Enums.IFCEntityType elementClassTypeEnum;
-         if (Enum.TryParse<Common.Enums.IFCEntityType>("IfcSite", out elementClassTypeEnum))
-            if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
-               return;
+         Common.Enums.IFCEntityType elementClassTypeEnum = Common.Enums.IFCEntityType.IfcSite;
+         if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
+            return;
 
          IFCFile file = exporterIFC.GetFile();
          using (IFCTransaction tr = new IFCTransaction(file))
@@ -207,7 +236,7 @@ namespace Revit.IFC.Export.Exporter
 
             IFCAnyHandle localPlacement = IFCInstanceExporter.CreateLocalPlacement(file, null, relativePlacement);
             IFCAnyHandle ownerHistory = ExporterCacheManager.OwnerHistoryHandle;
-            string siteObjectType = NamingUtil.CreateIFCObjectName(exporterIFC, element);
+            string siteObjectType = null;
 
             ProjectInfo projectInfo = doc.ProjectInformation;
             Element mainSiteElement = (element != null) ? element : projectInfo;
@@ -236,6 +265,9 @@ namespace Revit.IFC.Export.Exporter
                   if (string.IsNullOrWhiteSpace(siteLongName))
                      siteLongName = NamingUtil.GetOverrideStringValue(projectInfo, "SiteLongName", null);
 
+                  siteDescription = NamingUtil.GetOverrideStringValue(projectInfo, "SiteDescription", null);
+                  siteObjectType = NamingUtil.GetOverrideStringValue(projectInfo, "SiteObjectType", null);
+
                   // Look in site element for "IfcLandTitleNumber" or project information for "SiteLandTitleNumber".
                   siteLandTitleNumber = NamingUtil.GetOverrideStringValue(element, "IfcLandTitleNumber", null);
                   if (string.IsNullOrWhiteSpace(siteLandTitleNumber))
@@ -249,6 +281,8 @@ namespace Revit.IFC.Export.Exporter
                siteGUID = GUIDUtil.CreateProjectLevelGUID(doc, IFCProjectLevelGUIDType.Site);
                siteName = NamingUtil.GetOverrideStringValue(projectInfo, "SiteName", "Default");
                siteLongName = NamingUtil.GetLongNameOverride(projectInfo, NamingUtil.GetOverrideStringValue(projectInfo, "SiteLongName", null));
+               siteDescription = NamingUtil.GetOverrideStringValue(projectInfo, "SiteDescription", null);
+               siteObjectType = NamingUtil.GetOverrideStringValue(projectInfo, "SiteObjectType", null);
                siteLandTitleNumber = NamingUtil.GetOverrideStringValue(projectInfo, "SiteLandTitleNumber", null);
 
                // don't bother if we have nothing in the site whatsoever.
@@ -267,12 +301,63 @@ namespace Revit.IFC.Export.Exporter
 
             if (exportSite)
             {
-               siteHandle = IFCInstanceExporter.CreateSite(exporterIFC, element, siteGUID, ownerHistory, siteName, siteDescription, localPlacement,
-                  siteRepresentation, siteLongName, IFCElementComposition.Element, latitude, longitude, elevation, siteLandTitleNumber, null);
+               bool assignToBldg = false;
+               bool assignToSite = false;
+               IFCAnyHandle address = Exporter.CreateIFCAddress(file, doc, projectInfo, out assignToBldg, out assignToSite);
+               if (!assignToSite)
+                  address = null;
+
+               siteHandle = IFCInstanceExporter.CreateSite(exporterIFC, element, siteGUID, ownerHistory, siteName, siteDescription, siteObjectType, localPlacement,
+                  siteRepresentation, siteLongName, IFCElementComposition.Element, latitude, longitude, elevation, siteLandTitleNumber, address);
                productWrapper.AddSite(mainSiteElement, siteHandle);
                ExporterCacheManager.SiteHandle = siteHandle;
-            }
 
+               
+               // Getting Pset_SiteCommon data from parameters
+               // IFC2x3: BuildableArea, TotalArea, BuildingHeightLimit
+               HashSet<IFCAnyHandle> properties = new HashSet<IFCAnyHandle>();
+               IFCAnyHandle propSingleValue;
+               propSingleValue = PropertyUtil.CreateAreaMeasurePropertyFromElement(file, exporterIFC, projectInfo,
+                  "Pset_SiteCommon.BuildableArea", "BuildableArea", PropertyValueType.SingleValue);
+               if (!IFCAnyHandleUtil.IsNullOrHasNoValue(propSingleValue))
+                  properties.Add(propSingleValue);
+
+               propSingleValue = PropertyUtil.CreateAreaMeasurePropertyFromElement(file, exporterIFC, projectInfo,
+                  "Pset_SiteCommon.TotalArea", "TotalArea", PropertyValueType.SingleValue);
+               if (!IFCAnyHandleUtil.IsNullOrHasNoValue(propSingleValue))
+                  properties.Add(propSingleValue);
+
+               propSingleValue = PropertyUtil.CreatePositiveLengthMeasurePropertyFromElement(file, exporterIFC, projectInfo,
+                  "Pset_SiteCommon.BuildingHeightLimit", null, "BuildingHeightLimit", PropertyValueType.SingleValue);
+               if (!IFCAnyHandleUtil.IsNullOrHasNoValue(propSingleValue))
+                  properties.Add(propSingleValue);
+
+               if (!ExporterCacheManager.ExportOptionsCache.ExportAsOlderThanIFC4)
+               {
+                  propSingleValue = PropertyUtil.CreateIdentifierPropertyFromElement(file, projectInfo,
+                     "Pset_SiteCommon.Reference", "Reference", PropertyValueType.SingleValue);
+                  if (!IFCAnyHandleUtil.IsNullOrHasNoValue(propSingleValue))
+                     properties.Add(propSingleValue);
+
+                  propSingleValue = PropertyUtil.CreatePositiveRatioPropertyFromElement(file, exporterIFC, projectInfo,
+                     "Pset_SiteCommon.SiteCoverageRatio", "SiteCoverageRatio", PropertyValueType.SingleValue);
+                  if (!IFCAnyHandleUtil.IsNullOrHasNoValue(propSingleValue))
+                     properties.Add(propSingleValue);
+
+                  propSingleValue = PropertyUtil.CreatePositiveRatioPropertyFromElement(file, exporterIFC, projectInfo,
+                     "Pset_SiteCommon.FloorAreaRatio", "FloorAreaRatio", PropertyValueType.SingleValue);
+                  if (!IFCAnyHandleUtil.IsNullOrHasNoValue(propSingleValue))
+                     properties.Add(propSingleValue);
+               }
+
+               if (properties.Count > 0)
+               {
+                  IFCInstanceExporter.CreatePropertySet(file,
+                      GUIDUtil.CreateGUID(), ExporterCacheManager.OwnerHistoryHandle, "Pset_SiteCommon",
+                      null, properties);
+               }
+               ExporterUtil.ExportRelatedProperties(exporterIFC, projectInfo, productWrapper);
+            }
 
             tr.Commit();
          }

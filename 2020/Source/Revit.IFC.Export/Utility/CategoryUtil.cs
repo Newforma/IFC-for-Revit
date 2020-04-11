@@ -19,22 +19,20 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
-using Autodesk.Revit;
+using System.Linq;
 using Autodesk.Revit.ApplicationServices;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.IFC;
 using Revit.IFC.Common.Utility;
 using Revit.IFC.Export.Exporter.PropertySet;
 using Revit.IFC.Export.Toolkit;
-using Revit.IFC.Common.Enums;
 
 namespace Revit.IFC.Export.Utility
 {
    /// <summary>
    /// Provides static methods for category related manipulations.
    /// </summary>
-   class CategoryUtil
+   public class CategoryUtil
    {
       /// <summary>
       /// Gets category id of an element.
@@ -161,6 +159,58 @@ namespace Revit.IFC.Export.Utility
                color = new Color(0x7f, 0x7f, 0x7f);
 
             return color;
+         }
+      }
+
+      /// <summary>
+      /// Get various color values from element's material
+      /// </summary>
+      /// <param name="element">the element</param>
+      /// <param name="materialColor">element's material color</param>
+      /// <param name="surfacePatternColor">element's material surface pattern color</param>
+      /// <param name="cutPatternColor">element's material cut pattern color</param>
+      /// <param name="opacity">material opacity</param>
+      public static void GetElementColorAndTransparency(Element element, out Color materialColor, out Color surfacePatternColor, out Color cutPatternColor, out double? opacity)
+      {
+         Category category = element.Category;
+
+         materialColor = null;
+         surfacePatternColor = null;
+         cutPatternColor = null;
+         opacity = null;
+
+         ElementId materialId = element.GetMaterialIds(false).FirstOrDefault();
+         Material matElem = (materialId != null) ? element.Document.GetElement(materialId) as Material : null;
+
+         if (matElem == null)
+         {
+            if (category == null)
+            {
+               return;
+            }
+            matElem = category.Material;
+         }
+
+         if (matElem != null)
+         {
+            materialColor = GetSafeColor(matElem.Color);
+            surfacePatternColor = GetSafeColor(matElem.SurfaceForegroundPatternColor);
+            cutPatternColor = GetSafeColor(matElem.CutForegroundPatternColor);
+            opacity = (double) (100 - matElem.Transparency)/100;
+         }
+         else
+         {
+            Color color = GetSafeColor(category.LineColor);
+
+            // Grey is returned in place of pure black.  For systems which default to a black background color, 
+            // Grey is more of a contrast.  
+            if (color.Red == 0 && color.Green == 0 && color.Blue == 0)
+               color = new Color(0x7f, 0x7f, 0x7f);
+
+            materialColor = color;
+            surfacePatternColor = color;
+            cutPatternColor = color;
+            opacity = 1.0;
          }
       }
 
@@ -447,18 +497,19 @@ namespace Revit.IFC.Export.Utility
             {
                Material material = document.GetElement(materialId) as Material;
                if (material != null)
+               {
                   materialName = NamingUtil.GetNameOverride(material, material.Name);
 
-               if (ExporterCacheManager.ExportOptionsCache.ExportAs4)
-               {
-                  category = NamingUtil.GetOverrideStringValue(material, "IfcCategory", material.Category.Name);
-                  if (string.IsNullOrEmpty(category))
-                     category = NamingUtil.GetOverrideStringValue(material, "Category", material.Category.Name);
-                  description = NamingUtil.GetOverrideStringValue(material, "IfcDescription", null);
+                  if (ExporterCacheManager.ExportOptionsCache.ExportAs4)
+                  {
+                     category = NamingUtil.GetOverrideStringValue(material, "IfcCategory",
+                        NamingUtil.GetOverrideStringValue(material, "Category", material.MaterialCategory));
+                     description = NamingUtil.GetOverrideStringValue(material, "IfcDescription", null);
+                  }
                }
             }
 
-            materialNameHandle = IFCInstanceExporter.CreateMaterial(exporterIFC.GetFile(), materialName, description:description, category:category);
+            materialNameHandle = IFCInstanceExporter.CreateMaterial(exporterIFC.GetFile(), materialName, description: description, category: category);
 
             ExporterCacheManager.MaterialHandleCache.Register(materialId, materialNameHandle);
 
@@ -471,6 +522,7 @@ namespace Revit.IFC.Export.Utility
                {
                   Material matElem = document.GetElement(materialId) as Material;
 
+                  // TODO_DOUBLE_PATTERN - deal with background pattern
                   ElementId fillPatternId = (matElem != null) ? matElem.CutForegroundPatternId : ElementId.InvalidElementId;
                   Autodesk.Revit.DB.Color color = (matElem != null) ? GetSafeColor(matElem.CutForegroundPatternColor) : new Color(0, 0, 0);
 
@@ -536,7 +588,7 @@ namespace Revit.IFC.Export.Utility
             foreach (KeyValuePair<ElementId, IFCAnyHandle> MnP in materialAndProfile.GetKeyValuePairs())
             {
                IFCAnyHandle materialHnd = CategoryUtil.GetOrCreateMaterialHandle(exporterIFC, MnP.Key);
-               if (materialHnd != null && ExporterCacheManager.ExportOptionsCache.ExportAs4)
+               if (materialHnd != null && !ExporterCacheManager.ExportOptionsCache.ExportAsOlderThanIFC4 && !ExporterCacheManager.ExportOptionsCache.ExportAs4ReferenceView)
                   matProf.Add(IFCInstanceExporter.CreateMaterialProfile(file, MnP.Value, Material: materialHnd, name: familySymbol.Name));
             }
 

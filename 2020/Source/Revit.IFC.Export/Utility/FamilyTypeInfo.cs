@@ -17,199 +17,304 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
-using System;
 using System.Collections.Generic;
-using System.Text;
-using Autodesk.Revit;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.IFC;
 using Revit.IFC.Export.Utility;
-using Revit.IFC.Export.Toolkit;
 using Revit.IFC.Common.Utility;
 
 
 namespace Revit.IFC.Export.Exporter
 {
-    /// <summary>
-    ///  An class representing data about a given family element type.
-    /// </summary>
-    public class FamilyTypeInfo
-    {
-        /// <summary>
-        ///  Identifies if the object represents a valid type info.
-        ///  A type info must have either the style, 3d map handle, or 2d map handle set
-        /// to a valid value to be valid.
-        /// </summary>
-        /// <returns>
-        /// True if the object is valid, false otherwise. 
-        /// </returns>
-        public bool IsValid()
-        {
-            return !IFCAnyHandleUtil.IsNullOrHasNoValue(Style) || 
-                !IFCAnyHandleUtil.IsNullOrHasNoValue(Map2DHandle) ||
-                !IFCAnyHandleUtil.IsNullOrHasNoValue(Map3DHandle);
-        }
+   public class FamilyGeometrySummaryData
+   {
+      public int CurveCount { get; set; } = 0;
+      public double CurveLengthTotal { get; set; } = 0.0;
+      public int EdgeCount { get; set; } = 0;
+      public int FaceCount { get; set; } = 0;
+      public double FaceAreaTotal { get; set; } = 0.0;
+      public int MeshCount { get; set; } = 0;
+      public int MeshNumberOfTriangleTotal { get; set; } = 0;
+      public int PointCount { get; set; } = 0;
+      public int PolylineCount { get; set; } = 0;
+      public int PolylineNumberOfCoordinatesTotal { get; set; } = 0;
+      public int ProfileCount { get; set; } = 0;
+      public int SolidCount { get; set; } = 0;
+      public double SolidVolumeTotal { get; set; } = 0.0;
+      public double SolidSurfaceAreaTotal { get; set; } = 0.0;
+      public int SolidFacesCountTotal { get; set; } = 0;
+      public int SolidEdgesCountTotal { get; set; } = 0;
+      public int GeometryInstanceCount { get; set; } = 0;
 
-        /// <summary>
-        /// The associated handle to an IfcTypeProduct for the type.
-        /// </summary>
-        IFCAnyHandle m_Style = null;
+      public void Add(FamilyGeometrySummaryData otherData)
+      {
+         if (otherData == null)
+            return;
 
-        /// <summary>
-        /// The associated handle to a 2D IfcRepresentationMap for the type.
-        /// </summary>
-        IFCAnyHandle m_Map2DHandle = null;
+         CurveCount += otherData.CurveCount;
+         CurveLengthTotal += otherData.CurveLengthTotal;
+         EdgeCount += otherData.EdgeCount;
+         FaceCount += otherData.FaceCount;
+         FaceAreaTotal += otherData.FaceAreaTotal;
+         MeshCount += otherData.MeshCount;
+         MeshNumberOfTriangleTotal += otherData.MeshNumberOfTriangleTotal;
+         PointCount += otherData.PointCount;
+         PolylineCount += otherData.PolylineCount;
+         PolylineNumberOfCoordinatesTotal += otherData.PolylineNumberOfCoordinatesTotal;
+         ProfileCount += otherData.ProfileCount;
+         SolidCount += otherData.SolidCount;
+         SolidVolumeTotal += otherData.SolidVolumeTotal;
+         SolidSurfaceAreaTotal += otherData.SolidSurfaceAreaTotal;
+         SolidFacesCountTotal += otherData.SolidFacesCountTotal;
+         SolidEdgesCountTotal += otherData.SolidEdgesCountTotal;
+         GeometryInstanceCount += otherData.GeometryInstanceCount;
+      }
 
-        /// <summary>
-        /// The associated handle to a 3D IfcRepresentationMap for the type.
-        /// </summary>
-        IFCAnyHandle m_Map3DHandle = null;
+      public bool Equal(FamilyGeometrySummaryData otherData)
+      {
+         if (otherData == null)
+            return false;
 
-        /// <summary>
-        /// The material id associated with this type.
-        /// </summary>
-        HashSet<ElementId> m_MaterialIds = null;
+         if (CurveCount == otherData.CurveCount
+            && MathUtil.IsAlmostEqual(CurveLengthTotal, otherData.CurveLengthTotal)
+            && EdgeCount == otherData.EdgeCount
+            && FaceCount == otherData.FaceCount
+            && MathUtil.IsAlmostEqual(FaceAreaTotal, otherData.FaceAreaTotal)
+            && MeshCount == otherData.MeshCount
+            && MeshNumberOfTriangleTotal == otherData.MeshNumberOfTriangleTotal
+            && PointCount == otherData.PointCount
+            && PolylineCount == otherData.PolylineCount
+            && PolylineNumberOfCoordinatesTotal == otherData.PolylineNumberOfCoordinatesTotal
+            && ProfileCount == otherData.ProfileCount
+            && SolidCount == otherData.SolidCount
+            && MathUtil.IsAlmostEqual(SolidVolumeTotal, otherData.SolidVolumeTotal)
+            && MathUtil.IsAlmostEqual(SolidSurfaceAreaTotal, otherData.SolidSurfaceAreaTotal)
+            && SolidFacesCountTotal == otherData.SolidFacesCountTotal
+            && SolidEdgesCountTotal == otherData.SolidEdgesCountTotal)
+               return true;
 
-        /// <summary>  
-        /// The transform between the coordinate system of the type and the coordinate system of the 
-        /// instance's location in the Revit model.
-        /// </summary>
-        Transform m_StyleTransform = null;
+         return false;
+      }
 
-        /// <summary>
-        /// The area of the type's cross-section, scaled into the units of export.
-        /// This property is typically used only for columns, beams and other framing members.
-        /// </summary>
-        double m_ScaledArea = 0.0;
+      /// <summary>
+      /// If the geometry element contains only a GeometryInstance
+      /// </summary>
+      /// <returns>true/false</returns>
+      public bool OnlyContainsGeometryInstance()
+      {
+         if (GeometryInstanceCount > 0
+            && CurveCount == 0
+            && EdgeCount == 0
+            && FaceCount == 0
+            && MeshCount == 0
+            && PointCount == 0
+            && PolylineCount == 0
+            && ProfileCount == 0
+            && SolidCount == 0)
+               return true;
 
-        /// <summary>
-        /// The depth of the type, scaled into the units of export.
-        /// This property is typically used only for columns, beams and other framing members.
-        /// </summary>
-        double m_ScaledDepth = 0.0;
+         return false;
+      }
+   }
 
-        /// <summary>
-        /// The inner perimeter of the boundaries of the type's cross-section, scaled into the units of export.
-        /// This property is typically used only for columns, beams and other framing members.
-        /// </summary>
-        double m_ScaledInnerPerimeter = 0.0;
+   /// <summary>
+   ///  An class representing data about a given family element type.
+   /// </summary>
+   public class FamilyTypeInfo
+   {
+      /// <summary>
+      ///  Identifies if the object represents a valid type info.
+      ///  A type info must have either the style, 3d map handle, or 2d map handle set
+      /// to a valid value to be valid.
+      /// </summary>
+      /// <returns>
+      /// True if the object is valid, false otherwise. 
+      /// </returns>
+      public bool IsValid()
+      {
+         return !IFCAnyHandleUtil.IsNullOrHasNoValue(Style) ||
+             !IFCAnyHandleUtil.IsNullOrHasNoValue(Map2DHandle) ||
+             !IFCAnyHandleUtil.IsNullOrHasNoValue(Map3DHandle);
+      }
 
-        /// <summary>
-        /// The outer perimeter of the boundaries of the type's cross-section, scaled into the units of export.
-        /// This property is typically used only for columns, beams and other framing members.
-        /// </summary>
-        double m_ScaledOuterPerimeter = 0.0;
+      /// <summary>
+      /// The associated handle to an IfcTypeProduct for the type.
+      /// </summary>
+      IFCAnyHandle m_Style = null;
 
-        MaterialAndProfile m_MaterialAndProfile = null;
+      /// <summary>
+      /// The associated handle to a 2D IfcRepresentationMap for the type.
+      /// </summary>
+      IFCAnyHandle m_Map2DHandle = null;
 
-        /// <summary>
-        /// The associated handle to an IfcTypeProduct for the type.
-        /// </summary>
-        public IFCAnyHandle Style
-        {
-            get { return m_Style; }
-            set { m_Style = value; }
-        }
+      /// <summary>
+      /// The associated handle to a 3D IfcRepresentationMap for the type.
+      /// </summary>
+      IFCAnyHandle m_Map3DHandle = null;
 
-        /// <summary>
-        /// The associated handle to a 2D IfcRepresentationMap for the type.
-        /// Typically used only for Building Element Proxy elements (masses).
-        /// </summary>
-        public IFCAnyHandle Map2DHandle
-        {
-            get { return m_Map2DHandle; }
-            set { m_Map2DHandle = value; }
-        }
+      /// <summary>
+      /// The material id associated with this type.
+      /// </summary>
+      HashSet<ElementId> m_MaterialIds = null;
 
-        /// <summary>
-        /// The associated handle to a 3D IfcRepresentationMap for the type.
-        /// Typically used only for Building Element Proxy elements (masses).
-        /// </summary>
-        public IFCAnyHandle Map3DHandle
-        {
-            get { return m_Map3DHandle; }
-            set { m_Map3DHandle = value; }
-        }
+      /// <summary>  
+      /// The transform between the coordinate system of the type and the coordinate system of the 
+      /// instance's location in the Revit model.
+      /// </summary>
+      Transform m_StyleTransform = null;
 
-        /// <summary>
-        /// The material ids associated with this type.
-        /// </summary>
-        public HashSet<ElementId> MaterialIds
-        {
-            get
-            {
-                if (m_MaterialIds == null)
-                    m_MaterialIds = new HashSet<ElementId>();
-                return m_MaterialIds;
-            }
-            set { m_MaterialIds = value; }
-        }
+      /// <summary>
+      /// The area of the type's cross-section, scaled into the units of export.
+      /// This property is typically used only for columns, beams and other framing members.
+      /// </summary>
+      double m_ScaledArea = 0.0;
 
-        /// <summary>  
-        /// The transform between the coordinate system of the type and the coordinate system of the 
-        /// instance's location in the Revit model.
-        /// </summary>
-        public Transform StyleTransform
-        {
-            get 
-            {
-                if (m_StyleTransform == null)
-                    m_StyleTransform = Transform.Identity;
-                return m_StyleTransform; 
-            }
-            set { m_StyleTransform = value; }
-        }
+      /// <summary>
+      /// The depth of the type, scaled into the units of export.
+      /// This property is typically used only for columns, beams and other framing members.
+      /// </summary>
+      double m_ScaledDepth = 0.0;
 
-        /// <summary>
-        /// The area of the type's cross-section, scaled into the units of export.
-        /// This property is typically used only for columns, beams and other framing members.
-        /// </summary>
-        public double ScaledArea
-        {
-            get { return m_ScaledArea; }
-            set { m_ScaledArea = value; }
-        }
+      /// <summary>
+      /// The inner perimeter of the boundaries of the type's cross-section, scaled into the units of export.
+      /// This property is typically used only for columns, beams and other framing members.
+      /// </summary>
+      double m_ScaledInnerPerimeter = 0.0;
 
-        /// <summary>
-        /// The depth of the type, scaled into the units of export.
-        /// This property is typically used only for columns, beams and other framing members.
-        /// </summary>
-        public double ScaledDepth
-        {
-            get { return m_ScaledDepth; }
-            set { m_ScaledDepth = value; }
-        }
+      /// <summary>
+      /// The outer perimeter of the boundaries of the type's cross-section, scaled into the units of export.
+      /// This property is typically used only for columns, beams and other framing members.
+      /// </summary>
+      double m_ScaledOuterPerimeter = 0.0;
 
-        /// <summary>
-        /// The inner perimeter of the boundaries of the type's cross-section, scaled into the units of export.
-        /// This property is typically used only for columns, beams and other framing members.
-        /// </summary>
-        public double ScaledInnerPerimeter
-        {
-            get { return m_ScaledInnerPerimeter; }
-            set { m_ScaledInnerPerimeter = value; }
-        }
+      MaterialAndProfile m_MaterialAndProfile = null;
 
-        /// <summary>
-        /// The outer perimeter of the boundaries of the type's cross-section, scaled into the units of export.
-        /// This property is typically used only for columns, beams and other framing members.
-        /// </summary>
-        public double ScaledOuterPerimeter
-        {
-            get { return m_ScaledOuterPerimeter; }
-            set { m_ScaledOuterPerimeter = value; }
-        }
+      FamilyGeometrySummaryData m_FamilyGeometrySummaryData = null;
 
-        public MaterialAndProfile materialAndProfile
-        {
-            get
-            {
-                if (m_MaterialAndProfile == null)
-                    m_MaterialAndProfile = new MaterialAndProfile();
-                return m_MaterialAndProfile;
-            }
-            set { m_MaterialAndProfile = value; }
-        }
+      /// <summary>
+      /// The associated handle to an IfcTypeProduct for the type.
+      /// </summary>
+      public IFCAnyHandle Style
+      {
+         get { return m_Style; }
+         set { m_Style = value; }
+      }
 
-    }
+      /// <summary>
+      /// The associated handle to a 2D IfcRepresentationMap for the type.
+      /// Typically used only for Building Element Proxy elements (masses).
+      /// </summary>
+      public IFCAnyHandle Map2DHandle
+      {
+         get { return m_Map2DHandle; }
+         set { m_Map2DHandle = value; }
+      }
+
+      /// <summary>
+      /// The associated handle to a 3D IfcRepresentationMap for the type.
+      /// Typically used only for Building Element Proxy elements (masses).
+      /// </summary>
+      public IFCAnyHandle Map3DHandle
+      {
+         get { return m_Map3DHandle; }
+         set { m_Map3DHandle = value; }
+      }
+
+      /// <summary>
+      /// The material ids associated with this type.
+      /// </summary>
+      public HashSet<ElementId> MaterialIds
+      {
+         get
+         {
+            if (m_MaterialIds == null)
+               m_MaterialIds = new HashSet<ElementId>();
+            return m_MaterialIds;
+         }
+         set { m_MaterialIds = value; }
+      }
+
+      /// <summary>  
+      /// The transform between the coordinate system of the type and the coordinate system of the 
+      /// instance's location in the Revit model.
+      /// </summary>
+      public Transform StyleTransform
+      {
+         get
+         {
+            if (m_StyleTransform == null)
+               m_StyleTransform = Transform.Identity;
+            return m_StyleTransform;
+         }
+         set { m_StyleTransform = value; }
+      }
+
+      /// <summary>
+      /// The area of the type's cross-section, scaled into the units of export.
+      /// This property is typically used only for columns, beams and other framing members.
+      /// </summary>
+      public double ScaledArea
+      {
+         get { return m_ScaledArea; }
+         set { m_ScaledArea = value; }
+      }
+
+      /// <summary>
+      /// The depth of the type, scaled into the units of export.
+      /// This property is typically used only for columns, beams and other framing members.
+      /// </summary>
+      public double ScaledDepth
+      {
+         get { return m_ScaledDepth; }
+         set { m_ScaledDepth = value; }
+      }
+
+      /// <summary>
+      /// The inner perimeter of the boundaries of the type's cross-section, scaled into the units of export.
+      /// This property is typically used only for columns, beams and other framing members.
+      /// </summary>
+      public double ScaledInnerPerimeter
+      {
+         get { return m_ScaledInnerPerimeter; }
+         set { m_ScaledInnerPerimeter = value; }
+      }
+
+      /// <summary>
+      /// The outer perimeter of the boundaries of the type's cross-section, scaled into the units of export.
+      /// This property is typically used only for columns, beams and other framing members.
+      /// </summary>
+      public double ScaledOuterPerimeter
+      {
+         get { return m_ScaledOuterPerimeter; }
+         set { m_ScaledOuterPerimeter = value; }
+      }
+
+      /// <summary>
+      /// Material and Profile information for a family
+      /// </summary>
+      public MaterialAndProfile materialAndProfile
+      {
+         get
+         {
+            if (m_MaterialAndProfile == null)
+               m_MaterialAndProfile = new MaterialAndProfile();
+            return m_MaterialAndProfile;
+         }
+         set { m_MaterialAndProfile = value; }
+      }
+
+      /// <summary>
+      /// A summary of family geometry data useful for comparison purpose
+      /// </summary>
+      public FamilyGeometrySummaryData familyGeometrySummaryData
+      {
+         get
+         {
+            if (m_FamilyGeometrySummaryData == null)
+               m_FamilyGeometrySummaryData = new FamilyGeometrySummaryData();
+            return m_FamilyGeometrySummaryData;
+         }
+         set { m_FamilyGeometrySummaryData = value; }
+      }
+   }
 }

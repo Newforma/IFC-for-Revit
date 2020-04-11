@@ -1,8 +1,5 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27130.2010
-MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Revit.IFC.Export", "Source\Revit.IFC.Export\Revit.IFC.Export.csproj", "{BCE5141A-291B-4CD8-A69B-7B9345AA00E9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Revit.IFC.Common", "Source\Revit.IFC.Common\Revit.IFC.Common.csproj", "{032EA4DC-181F-4453-9F93-E08DE1C07D95}"
@@ -15,41 +12,16 @@ EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
-		Debug|Mixed Platforms = Debug|Mixed Platforms
-		Debug|x86 = Debug|x86
 		Release|Any CPU = Release|Any CPU
-		Release|Mixed Platforms = Release|Mixed Platforms
-		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{BCE5141A-291B-4CD8-A69B-7B9345AA00E9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{BCE5141A-291B-4CD8-A69B-7B9345AA00E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{BCE5141A-291B-4CD8-A69B-7B9345AA00E9}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{BCE5141A-291B-4CD8-A69B-7B9345AA00E9}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{BCE5141A-291B-4CD8-A69B-7B9345AA00E9}.Debug|x86.ActiveCfg = Debug|Any CPU
 		{BCE5141A-291B-4CD8-A69B-7B9345AA00E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BCE5141A-291B-4CD8-A69B-7B9345AA00E9}.Release|Any CPU.Build.0 = Release|Any CPU
-		{BCE5141A-291B-4CD8-A69B-7B9345AA00E9}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{BCE5141A-291B-4CD8-A69B-7B9345AA00E9}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{BCE5141A-291B-4CD8-A69B-7B9345AA00E9}.Release|x86.ActiveCfg = Release|Any CPU
 		{032EA4DC-181F-4453-9F93-E08DE1C07D95}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{032EA4DC-181F-4453-9F93-E08DE1C07D95}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{032EA4DC-181F-4453-9F93-E08DE1C07D95}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{032EA4DC-181F-4453-9F93-E08DE1C07D95}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{032EA4DC-181F-4453-9F93-E08DE1C07D95}.Debug|x86.ActiveCfg = Debug|Any CPU
 		{032EA4DC-181F-4453-9F93-E08DE1C07D95}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{032EA4DC-181F-4453-9F93-E08DE1C07D95}.Release|Any CPU.Build.0 = Release|Any CPU
-		{032EA4DC-181F-4453-9F93-E08DE1C07D95}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{032EA4DC-181F-4453-9F93-E08DE1C07D95}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{032EA4DC-181F-4453-9F93-E08DE1C07D95}.Release|x86.ActiveCfg = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {45CD7B0B-1A3F-4E27-944A-3F47A9D25A98}
-	EndGlobalSection
-	GlobalSection(DPCodeReviewSolutionGUID) = preSolution
-		DPCodeReviewSolutionGUID = {00000000-0000-0000-0000-000000000000}
 	EndGlobalSection
 EndGlobal

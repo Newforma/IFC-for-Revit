@@ -27,7 +27,6 @@ using Autodesk.Revit.DB.IFC;
 using Revit.IFC.Common.Enums;
 using Revit.IFC.Common.Utility;
 
-using Newtonsoft.Json;
 
 // CQ_TODO: Better storage of pipe insulation options
 
@@ -56,18 +55,19 @@ namespace Revit.IFC.Export.Utility
       }
 
       private GUIDOptions m_GUIDOptions;
-      private bool m_ExportAs4_ADD1;
-      private bool m_ExportAs4_ADD2;
+      //private bool m_ExportAs4_ADD1;
+      //private bool m_ExportAs4_ADD2;
       private IFCVersion m_FileVersion;
       public COBieCompanyInfo COBieCompanyInfo { get; set; }
       public COBieProjectInfo COBieProjectInfo { get; set; }
+      public bool IncludeSteelElements { get; set; }
 
       /// Private default constructor.
       /// </summary>
       private ExportOptionsCache()
       {
-         m_ExportAs4_ADD1 = false;
-         m_ExportAs4_ADD2 = false;
+         //m_ExportAs4_ADD1 = false;
+         //m_ExportAs4_ADD2 = false;
       }
 
 
@@ -188,11 +188,16 @@ namespace Revit.IFC.Export.Utility
          cache.ExportBaseQuantities = exporterIFC.ExportBaseQuantities;
          cache.WallAndColumnSplitting = exporterIFC.WallAndColumnSplitting;
          cache.SpaceBoundaryLevel = exporterIFC.SpaceBoundaryLevel;
-         // Export Part element only if 'Current View Only' is checked and 'Show Parts' is selected. 
-         cache.ExportParts = filterView != null && filterView.PartsVisibility == PartsVisibility.ShowPartsOnly;
+         // Export Part element only if 'Current View Only' is checked and 'Show Parts' is selected. Or if it is exported as IFC4RV
+         cache.ExportParts = (filterView != null && filterView.PartsVisibility == PartsVisibility.ShowPartsOnly);
          cache.ExportPartsAsBuildingElementsOverride = null;
          //cache.ExportAllLevels = false;
          cache.ExportAnnotationsOverride = null;
+
+         // We are going to default to "true" for IncludeSteelElements to allow the default API
+         // export to match the default UI.
+         bool? includeSteelElements = GetNamedBooleanOption(options, "IncludeSteelElements");
+         cache.IncludeSteelElements = includeSteelElements.HasValue && includeSteelElements.Value;
 
          // There is a bug in the native code that doesn't allow us to cast the filterView to any sub-type of View.  Work around this by re-getting the element pointer.
          if (filterView != null)
@@ -240,6 +245,10 @@ namespace Revit.IFC.Export.Utility
             bool? useVisibleRevitNameAsEntityName = GetNamedBooleanOption(options, "UseVisibleRevitNameAsEntityName");
             cache.NamingOptions.UseVisibleRevitNameAsEntityName =
                 (useVisibleRevitNameAsEntityName != null) && useVisibleRevitNameAsEntityName.GetValueOrDefault();
+
+            bool? useOnlyTypeNameForIfcType = GetNamedBooleanOption(options, "UseTypeNameOnlyForIfcType");
+            cache.NamingOptions.UseTypeNameOnlyForIfcType =
+                (useOnlyTypeNameForIfcType != null) && useOnlyTypeNameForIfcType.GetValueOrDefault();
          }
 
          // "SingleElement" export option - useful for debugging - only one input element will be processed for export
@@ -286,7 +295,7 @@ namespace Revit.IFC.Export.Utility
          if (siteTransformation != null)
          {
             try
-            { 
+            {
                cache.SiteTransformation = (SiteTransformBasis)siteTransformation;
             }
             catch (Exception) { }
@@ -312,7 +321,7 @@ namespace Revit.IFC.Export.Utility
             int levelOfDetail = (int)(tessellationLOD.Value * 4.0 + 0.5);
             // Ensure LOD is between 1 to 4, inclusive.
             levelOfDetail = Math.Min(Math.Max(levelOfDetail, 1), 4);
-            cache.LevelOfDetail = (ExportTessellationLevel) levelOfDetail;
+            cache.LevelOfDetail = (ExportTessellationLevel)levelOfDetail;
          }
 
          bool? useOnlyTriangulation = GetNamedBooleanOption(options, "UseOnlyTriangulation");
@@ -410,13 +419,6 @@ namespace Revit.IFC.Export.Utility
          }
 
          cache.ExcludeFilter = GetNamedStringOption(options, "ExcludeFilter");
-
-         // Get COBie specific information
-         //if (cache.ExportAs2x3COBIE24DesignDeliverable)
-         //{
-            //cache.COBieCompanyInfo = JsonConvert.DeserializeObject<COBieCompanyInfo>(GetNamedStringOption(options, "COBieCompanyInfo"));
-            //cache.COBieProjectInfo = JsonConvert.DeserializeObject<COBieProjectInfo>(GetNamedStringOption(options, "COBieProjectInfo"));
-         //}
          return cache;
       }
 
@@ -574,7 +576,7 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
-      /// Identifies if the file version being exported is 2x2.
+      /// Identifies if the schema version being exported is IFC 2x2.
       /// </summary>
       public bool ExportAs2x2
       {
@@ -585,7 +587,7 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
-      /// Identifies if the file version being exported is 2x3 Coordination View 1.0.
+      /// Identifies if the schema version being exported is IFC 2x3 Coordination View 1.0.
       /// </summary>
       public bool ExportAs2x3CoordinationView1
       {
@@ -596,7 +598,7 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
-      /// Identifies if the file version being exported is 2x3 Coordination View 2.0.
+      /// Identifies if the schema version being exported is IFC 2x3 Coordination View 2.0.
       /// </summary>
       public bool ExportAs2x3CoordinationView2
       {
@@ -607,7 +609,7 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
-      /// Identifies if the file version being exported is 2x3 Extended FM Handover View (e.g., UK COBie).
+      /// Identifies if the schema version being exported is IFC 2x3 Extended FM Handover View (e.g., UK COBie).
       /// </summary>
       public bool ExportAs2x3ExtendedFMHandoverView
       {
@@ -618,18 +620,30 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
-      /// Identifies if the file version being exported is 2x3 or 4 Coordination View 2.0.
+      /// Identifies if the schema version and MVD being exported is IFC 2x3 Coordination View 2.0 or any IFC 4 MVD.
       /// </summary>
+      /// <remarks>IFC 4 Coordination View 2.0 is not a real MVD; this was a placeholder and is obsolete.</remarks>
       public bool ExportAsCoordinationView2
       {
          get
          {
-            return (FileVersion == IFCVersion.IFC2x3CV2) || (FileVersion == IFCVersion.IFC4) || (FileVersion == IFCVersion.IFC2x3FM) || (FileVersion == IFCVersion.IFC2x3BFM) || (FileVersion == IFCVersion.IFC4RV) || (FileVersion == IFCVersion.IFC4DTV);
+            return (FileVersion == IFCVersion.IFC2x3CV2) || (FileVersion == IFCVersion.IFC4) || (FileVersion == IFCVersion.IFC2x3FM) || (FileVersion == IFCVersion.IFC2x3BFM);
          }
       }
 
       /// <summary>
-      /// Identifies if the file version being exported is 4.
+      /// Identifies if the IFC schema version is older than IFC 4.
+      /// </summary>
+      public bool ExportAsOlderThanIFC4
+      {
+         get
+         {
+            return ExportAs2x2 || ExportAs2x3;
+         }
+      }
+
+      /// <summary>
+      /// Identifies if the IFC schema version being exported is IFC 4.
       /// </summary>
       public bool ExportAs4
       {
@@ -642,34 +656,40 @@ namespace Revit.IFC.Export.Utility
       /// <summary>
       /// Identifies if the schema used is IFC4 Addendum 1 in place of IFC4 for version 4.
       /// </summary>
-      public bool ExportAs4_ADD1
-      {
-         get
-         {
-            return m_ExportAs4_ADD1;
-         }
+      //public bool ExportAs4_ADD1
+      //{
+      //   get
+      //   {
+      //      return m_ExportAs4_ADD1;
+      //   }
 
-         set
-         {
-            m_ExportAs4_ADD1 = value;
-         }
+      //   set
+      //   {
+      //      m_ExportAs4_ADD1 = value;
+      //   }
 
-      }
+      //}
 
-      public bool ExportAs4_ADD2
-      {
-         get
-         {
-            return m_ExportAs4_ADD2;
-         }
+      ///// <summary>
+      ///// Identifies if the schema used is IFC4 Addendum 2 in place of IFC4 for version 4.
+      ///// </summary>
+      //public bool ExportAs4_ADD2
+      //{
+      //   get
+      //   {
+      //      return m_ExportAs4_ADD2;
+      //   }
 
-         set
-         {
-            m_ExportAs4_ADD2 = value;
-         }
+      //   set
+      //   {
+      //      m_ExportAs4_ADD2 = value;
+      //   }
 
-      }
+      //}
 
+      /// <summary>
+      /// Identifies if the schema used is IFC 2x3.
+      /// </summary>
       public bool ExportAs2x3
       {
          get
@@ -679,7 +699,7 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
-      /// Identifies if the schema used is the GSA 2010 COBie specification.
+      /// Identifies if the schema and MVD used is the IFC 2x3 GSA 2010 COBie specification.
       /// </summary>
       public bool ExportAsCOBIE
       {
@@ -689,6 +709,9 @@ namespace Revit.IFC.Export.Utility
          }
       }
 
+      /// <summary>
+      /// Identifies if the schema and MVD used is the IFC 4 Reference View.
+      /// </summary>
       public bool ExportAs4ReferenceView
       {
          get
@@ -697,6 +720,9 @@ namespace Revit.IFC.Export.Utility
          }
       }
 
+      /// <summary>
+      /// Identifies if the schema and MVD used is the IFC 4 Design Transfer View.
+      /// </summary>
       public bool ExportAs4DesignTransferView
       {
          get
@@ -705,6 +731,21 @@ namespace Revit.IFC.Export.Utility
          }
       }
 
+      /// <summary>
+      /// Option to be used for general IFC4 export (not specific to RV or DTV MVDs). Useful when there is a need to export entities that are not strictly valid within RV or DTV
+      /// It should work like IFC2x3, except that it will use IFC4 tessellated geometry instead of IFC2x3 BREP
+      /// </summary>
+      public bool ExportAs4General
+      {
+         get
+         {
+            return (FileVersion == IFCVersion.IFC4);
+         }
+      }
+
+      /// <summary>
+      /// Identifies if the schema and MVD used is the IFC 2x3 COBie 2.4 Design Deliverable.
+      /// </summary>
       public bool ExportAs2x3COBIE24DesignDeliverable
       {
          get
@@ -860,7 +901,7 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
-      /// The option to leave tessellation results as triangulation and not optimized into polygonal faceset (supported in IFC4_ADD2)
+      /// The option to leave tessellation results as triangulation and not optimized into polygonal faceset (supported from IFC4_ADD2)
       /// </summary>
       public bool UseOnlyTriangulation
       {
@@ -933,8 +974,8 @@ namespace Revit.IFC.Export.Utility
       /// </summary>
       //public bool ExportAllLevels
       //{
-      //   get;
-      //   set;
+         //get;
+         //set;
       //}
 
       /// <summary>

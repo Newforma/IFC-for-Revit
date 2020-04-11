@@ -42,7 +42,11 @@ namespace Revit.IFC.Export.Exporter.PropertySet
       /// </summary>
       string m_Name = String.Empty;
 
-      string m_Description = String.Empty;
+      /// <summary>
+      /// The optional description of the property set or quantity.  Null by default.
+      /// </summary>
+      string m_Description = null;
+
       /// <summary>
       /// The element id of the view schedule generating this Description, if appropriate.
       /// </summary>
@@ -91,15 +95,31 @@ namespace Revit.IFC.Export.Exporter.PropertySet
       }
 
       /// <summary>
+      /// 
+      /// </summary>
+      /// <param name="handle"></param>
+      /// <returns></returns>
+      public bool IsSubTypeOfEntityTypes(IFCEntityType ifcEntityType)
+      {
+         var ifcEntitySchemaTree = IfcSchemaEntityTree.GetEntityDictFor(ExporterCacheManager.ExportOptionsCache.FileVersion);
+         if (ifcEntitySchemaTree == null || ifcEntitySchemaTree.Count == 0)
+            return false;
+
+         // Note that although EntityTypes is represented as a set, we still need to go through each item in the last to check for subtypes.
+         foreach (IFCEntityType entityType in EntityTypes)
+         {
+            if (IfcSchemaEntityTree.IsSubTypeOf(ifcEntityType.ToString(), entityType.ToString(), strict: false))
+               return true;
+         }
+         return false;
+      }
+
+      /// <summary>
       /// Identifies if the input handle matches the type of element, and optionally the object type, 
       /// to which this description applies.
       /// </summary>
-      /// <param name="handle">
-      /// The handle.
-      /// </param>
-      /// <returns>
-      /// True if it matches, false otherwise.
-      /// </returns>
+      /// <param name="handle">The handle.</param>
+      /// <returns>True if it matches, false otherwise.</returns>
       public bool IsAppropriateType(IFCAnyHandle handle)
       {
          if (handle == null || !IsSubTypeOfEntityTypes(handle))
@@ -128,6 +148,18 @@ namespace Revit.IFC.Export.Exporter.PropertySet
       }
 
       /// <summary>
+      /// Identifies if the input type matches the type of element only to which this description applies.
+      /// </summary>
+      /// <param name="entity">the Entity</param>
+      /// <returns>true if matches</returns>
+      public bool IsAppropriateEntityType(IFCEntityType entity)
+      {
+         if (entity == IFCEntityType.UnKnown || !IsSubTypeOfEntityTypes(entity))
+            return false;
+         return true;
+      }
+
+      /// <summary>
       /// Identifies if the input handle matches the object type only to which this description applies.
       /// </summary>
       /// <param name="handle">
@@ -140,11 +172,50 @@ namespace Revit.IFC.Export.Exporter.PropertySet
       {
          if (handle == null)
             return false;
-         if (ObjectType == "")
+         //if (ObjectType == "")
+         //   return true;
+
+         // ObjectType information comes from PSD's Applicable Type. This may be a comma separated list of applicable type
+         IFCEntityType hndEntity = IFCAnyHandleUtil.GetEntityType(handle);
+         if (ObjectType.IndexOf(hndEntity.ToString(), StringComparison.InvariantCultureIgnoreCase) < 0)
+         {
+            // The use of ObjectType in the PSD is confusing at best. The purpose and its consistency is questionable. 
+            // If the entity is not found in this ObjectType, try the "old" way to compare the ObjectType attribute value
+            string objectType = IFCAnyHandleUtil.GetObjectType(handle);
+            if (!string.IsNullOrEmpty(objectType))
+            {
+               if (ObjectType.IndexOf(objectType, StringComparison.InvariantCultureIgnoreCase) < 0)
+            return false;
+               else
+                  return true;
+            }
+            return false;
+         }
+         else
+            return true;
+         //return (NamingUtil.IsEqualIgnoringCaseAndSpaces(ObjectType, objectType));
+      }
+
+      /// <summary>
+      /// Identifies if the input handle matches the object type only to which this description applies.
+      /// </summary>
+      /// <param name="entityType">the entity type</param>
+      /// <returns>true if found match</returns>
+      public bool IsAppropriateObjectType(IFCEntityType entityType)
+      {
+         //if (ObjectType == "")
+         //   return true;
+         if (entityType == IFCEntityType.UnKnown)
+            return false;
+
+         // ObjectType information comes from PSD's Applicable Type. This may be a comma separated list of applicable type
+         if (ObjectType.IndexOf(entityType.ToString(), StringComparison.InvariantCultureIgnoreCase) < 0)
+            return false;
+         else
             return true;
 
-         string objectType = IFCAnyHandleUtil.GetObjectType(handle);
-         return (NamingUtil.IsEqualIgnoringCaseAndSpaces(ObjectType, objectType));
+         //string objectType = IFCAnyHandleUtil.GetObjectType(handle);
+         //return (NamingUtil.IsEqualIgnoringCaseAndSpaces(ObjectType, objectType));
       }
 
       /// <summary>
@@ -182,7 +253,17 @@ namespace Revit.IFC.Export.Exporter.PropertySet
       public string Name
       {
          get { return m_Name; }
-         set { m_Name = value; }
+         set
+         {
+            m_Name = value;
+
+            // We will try to set the SubElementIndex based on the name of the PSet.  Only a few have entries.
+            IFCCommonPSets psetName;
+            if (Enum.TryParse<IFCCommonPSets>(m_Name, out psetName))
+               SubElementIndex = (int)psetName;
+            else
+               SubElementIndex = -1;
+         }
       }
 
       public string DescriptionOfSet

@@ -28,6 +28,75 @@ using Revit.IFC.Export.Utility;
 
 namespace Revit.IFC.Export.Exporter.PropertySet
 {
+   public class RevitBuiltInParameterMapper
+   {
+      /// <summary>
+      /// This is currently a hardwired list of properties that can be retrieved from Revit
+      /// built-in parameters.
+      /// </summary>
+      static private IDictionary<KeyValuePair<string, string>, BuiltInParameter> m_BuiltInSpecificParameterMapping = null;
+
+      static private IDictionary<string, BuiltInParameter> m_BuiltInGeneralParameterMapping = null;
+
+      static private void AddEntry(string propertyName, BuiltInParameter revitParameter)
+      {
+         m_BuiltInGeneralParameterMapping.Add(propertyName, revitParameter);
+      }
+
+      static private void AddEntry(string psetName, string propertyName, BuiltInParameter revitParameter)
+      {
+         m_BuiltInSpecificParameterMapping.Add(new KeyValuePair<string, string>(psetName, propertyName), revitParameter);
+      }
+
+      static private void Initialize()
+      {
+         m_BuiltInSpecificParameterMapping = new Dictionary<KeyValuePair<string, string>, BuiltInParameter>();
+         AddEntry("Pset_ManufacturerTypeInformation", "Manufacturer", BuiltInParameter.ALL_MODEL_MANUFACTURER);
+         AddEntry("Pset_CoveringCommon", "TotalThickness", BuiltInParameter.CEILING_THICKNESS);
+         AddEntry("Pset_LightFixtureTypeCommon", "TotalWattage", BuiltInParameter.LIGHTING_FIXTURE_WATTAGE);
+         AddEntry("Pset_RoofCommon", "TotalArea", BuiltInParameter.HOST_AREA_COMPUTED);
+         
+         m_BuiltInGeneralParameterMapping = new Dictionary<string, BuiltInParameter>();
+         AddEntry("Span", BuiltInParameter.INSTANCE_LENGTH_PARAM);
+         AddEntry("CeilingCovering", BuiltInParameter.ROOM_FINISH_CEILING);
+         AddEntry("WallCovering", BuiltInParameter.ROOM_FINISH_WALL);
+         AddEntry("FloorCovering", BuiltInParameter.ROOM_FINISH_FLOOR);
+         AddEntry("FireRating", BuiltInParameter.FIRE_RATING);
+         AddEntry("ThermalTransmittance", BuiltInParameter.ANALYTICAL_HEAT_TRANSFER_COEFFICIENT);
+      }
+
+      static private IDictionary<KeyValuePair<string, string>, BuiltInParameter> BuiltInSpecificParameterMapping
+      {
+         get
+         {
+            if (m_BuiltInSpecificParameterMapping == null)
+               Initialize();
+            return m_BuiltInSpecificParameterMapping;
+         }
+      }
+
+      static private IDictionary<string, BuiltInParameter> BuiltInGeneralParameterMapping
+      {
+         get
+         {
+            if (m_BuiltInGeneralParameterMapping == null)
+               Initialize();
+            return m_BuiltInGeneralParameterMapping;
+         }
+      }
+
+      static public BuiltInParameter GetRevitBuiltInParameter(string psetName, string propertyName)
+      {
+         BuiltInParameter builtInParameter = BuiltInParameter.INVALID;
+         if (BuiltInGeneralParameterMapping.TryGetValue(propertyName, out builtInParameter))
+            return builtInParameter;
+         if (BuiltInSpecificParameterMapping.TryGetValue(new KeyValuePair<string, string>(psetName, propertyName),
+               out builtInParameter))
+            return builtInParameter;
+         return BuiltInParameter.INVALID;
+      }
+   }
+
    /// <summary>
    /// A description mapping of a group of Revit parameters and/or calculated values to an IfcPropertySet.
    /// </summary>
@@ -42,6 +111,7 @@ namespace Revit.IFC.Export.Exporter.PropertySet
       /// </summary>
       IList<PropertySetEntry> m_Entries = new List<PropertySetEntry>();
 
+   
       /// <summary>
       /// The entries stored in this property set description.
       /// </summary>
@@ -49,13 +119,13 @@ namespace Revit.IFC.Export.Exporter.PropertySet
       {
          //if the PropertySetDescription name and PropertySetEntry name are in the dictionary, 
          Tuple<string, string> key = new Tuple<string, string>(this.Name, entry.PropertyName);
-         if (ExporterCacheManager.PropertyMapCache.ContainsKey(new Tuple<string, string>(this.Name, entry.PropertyName)))
+         if (ExporterCacheManager.PropertyMapCache.ContainsKey(key))
          {
-			
             //replace the PropertySetEntry.RevitParameterName by the value in the cache.
-            entry.SetRevitParameterName( ExporterCacheManager.PropertyMapCache[key]);
+            entry.SetRevitParameterName(ExporterCacheManager.PropertyMapCache[key]);
          }
 
+         entry.SetRevitBuiltInParameter(RevitBuiltInParameterMapper.GetRevitBuiltInParameter(key.Item1, key.Item2));
          entry.UpdateEntry();
          m_Entries.Add(entry);
       }
@@ -108,11 +178,17 @@ namespace Revit.IFC.Export.Exporter.PropertySet
 
          foreach (PropertySetEntry entry in m_Entries)
          {
-            IFCAnyHandle propHnd = entry.ProcessEntry(file, exporterIFC, ifcParams, elementToUse, elemTypeToUse, handle);
+            try
+            {
+               IFCAnyHandle propHnd = entry.ProcessEntry(file, exporterIFC, ifcParams, elementToUse, elemTypeToUse, handle);
+               if (IFCAnyHandleUtil.IsNullOrHasNoValue(propHnd))
+                  continue;
 
-            string currPropertyName = UsablePropertyName(propHnd, propertiesByName);
-            if (currPropertyName != null)
-               propertiesByName[currPropertyName] = propHnd;
+               string currPropertyName = UsablePropertyName(propHnd, propertiesByName);
+               if (currPropertyName != null)
+                  propertiesByName[currPropertyName] = propHnd;
+            }
+            catch(Exception) { }
          }
 
          ISet<IFCAnyHandle> props = new HashSet<IFCAnyHandle>(propertiesByName.Values);

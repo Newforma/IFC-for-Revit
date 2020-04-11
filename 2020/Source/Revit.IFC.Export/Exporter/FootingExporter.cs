@@ -80,16 +80,19 @@ namespace Revit.IFC.Export.Exporter
             return;
 
          // Check the intended IFC entity or type name is in the exclude list specified in the UI
-         Common.Enums.IFCEntityType elementClassTypeEnum;
-         if (Enum.TryParse<Common.Enums.IFCEntityType>("IfcFooting", out elementClassTypeEnum))
-            if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
-               return;
+         Common.Enums.IFCEntityType elementClassTypeEnum = Common.Enums.IFCEntityType.IfcFooting;
+         if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
+            return;
 
          IFCFile file = exporterIFC.GetFile();
 
          using (IFCTransaction tr = new IFCTransaction(file))
          {
-            using (PlacementSetter setter = PlacementSetter.Create(exporterIFC, element))
+            // Check for containment override
+            IFCAnyHandle overrideContainerHnd = null;
+            ElementId overrideContainerId = ParameterUtil.OverrideContainmentParameter(exporterIFC, element, out overrideContainerHnd);
+
+            using (PlacementSetter setter = PlacementSetter.Create(exporterIFC, element, null, null, overrideContainerId, overrideContainerHnd))
             {
                using (IFCExtrusionCreationData ecData = new IFCExtrusionCreationData())
                {
@@ -114,12 +117,19 @@ namespace Revit.IFC.Export.Exporter
                   }
 
                   string instanceGUID = GUIDUtil.CreateGUID(element);
-                  
+
                   string footingType = GetIFCFootingType(ifcEnumType);    // need to keep it for legacy support when original data follows slightly diff naming
-                  footingType = IFCValidateEntry.GetValidIFCType(element, footingType);
+                  IFCExportInfoPair exportInfo = new IFCExportInfoPair(elementClassTypeEnum, footingType);
 
                   IFCAnyHandle footing = IFCInstanceExporter.CreateFooting(exporterIFC, element, instanceGUID, ExporterCacheManager.OwnerHistoryHandle,
                       ecData.GetLocalPlacement(), prodRep, footingType);
+
+                  // TODO: to allow shared geometry for Footings. For now, Footing export will not use shared geometry
+                  if (exportInfo.ExportType != Common.Enums.IFCEntityType.UnKnown)
+                  {
+                     IFCAnyHandle type = ExporterUtil.CreateGenericTypeFromElement(element, exportInfo, file, ExporterCacheManager.OwnerHistoryHandle, exportInfo.ValidatedPredefinedType, productWrapper);
+                     ExporterCacheManager.TypeRelationsCache.Add(type, footing);
+                  }
 
                   if (exportParts)
                   {
@@ -133,7 +143,7 @@ namespace Revit.IFC.Export.Exporter
                      }
                   }
 
-                  productWrapper.AddElement(element, footing, setter, ecData, true);
+                  productWrapper.AddElement(element, footing, setter, ecData, true, exportInfo);
 
                   OpeningUtil.CreateOpeningsIfNecessary(footing, element, ecData, null,
                       exporterIFC, ecData.GetLocalPlacement(), setter, productWrapper);

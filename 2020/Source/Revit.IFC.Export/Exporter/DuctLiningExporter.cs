@@ -23,6 +23,7 @@ using Autodesk.Revit.DB.IFC;
 using Revit.IFC.Export.Utility;
 using Revit.IFC.Export.Toolkit;
 using Revit.IFC.Common.Utility;
+using Revit.IFC.Common.Enums;
 
 namespace Revit.IFC.Export.Exporter
 {
@@ -46,16 +47,19 @@ namespace Revit.IFC.Export.Exporter
             return false;
 
          // Check the intended IFC entity or type name is in the exclude list specified in the UI
-         Common.Enums.IFCEntityType elementClassTypeEnum;
-         if (Enum.TryParse<Common.Enums.IFCEntityType>("IfcCovering", out elementClassTypeEnum))
-            if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
-               return false;
+         Common.Enums.IFCEntityType elementClassTypeEnum = Common.Enums.IFCEntityType.IfcCovering;
+         if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
+            return false;
 
          IFCFile file = exporterIFC.GetFile();
 
          using (IFCTransaction tr = new IFCTransaction(file))
          {
-            using (PlacementSetter placementSetter = PlacementSetter.Create(exporterIFC, element))
+            // Check for containment override
+            IFCAnyHandle overrideContainer = null;
+            ElementId overrideContainerId = ParameterUtil.OverrideContainmentParameter(exporterIFC, element, out overrideContainer);
+
+            using (PlacementSetter placementSetter = PlacementSetter.Create(exporterIFC, element, null, null, overrideContainerId, overrideContainer))
             {
                using (IFCExtrusionCreationData ecData = new IFCExtrusionCreationData())
                {
@@ -77,11 +81,13 @@ namespace Revit.IFC.Export.Exporter
                   IFCAnyHandle ownerHistory = ExporterCacheManager.OwnerHistoryHandle;
                   IFCAnyHandle localPlacement = ecData.GetLocalPlacement();
 
+                  string ifcType = "Wrapping";
                   IFCAnyHandle ductLining = IFCInstanceExporter.CreateCovering(exporterIFC, element, guid,
-                      ownerHistory, localPlacement, representation, "Wrapping");
+                      ownerHistory, localPlacement, representation, ifcType);
                   ExporterCacheManager.ElementToHandleCache.Register(element.Id, ductLining);
+                  IFCExportInfoPair exportInfo = new IFCExportInfoPair(IFCEntityType.IfcCovering, ifcType);
 
-                  productWrapper.AddElement(element, ductLining, placementSetter.LevelInfo, ecData, true);
+                  productWrapper.AddElement(element, ductLining, placementSetter.LevelInfo, ecData, true, exportInfo);
 
                   ElementId matId = BodyExporter.GetBestMaterialIdFromGeometryOrParameter(geometryElement, exporterIFC, element);
                   CategoryUtil.CreateMaterialAssociation(exporterIFC, ductLining, matId);
