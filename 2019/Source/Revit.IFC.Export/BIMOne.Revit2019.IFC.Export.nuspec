@@ -6,12 +6,14 @@
         <authors>BIM One Inc.</authors>
         <description>IFC Exporter for Revit.</description>
     <dependencies>
+      <dependency id="Antlr4.Runtime" version="4.6.6" />
       <dependency id="BIMOne.Autodesk.Revit2019.RevitAPI" version="19.0.0.405" />
       <dependency id="BIMOne.Autodesk.Revit2019.RevitAPIIFC" version="19.0.0.405" />
+      <dependency id="GeometryGymIFC" version="0.0.21" />
       <dependency id="Newtonsoft.Json" version="4.5.1" />
     </dependencies>
   </metadata>
   <files>
-    <file src="bin\Release\*.dll" target="lib\net452" />
+    <file src="bin\Release\BIMOne.Revit.IFC.Export.dll" target="lib\net47" />
   </files>
 </package>

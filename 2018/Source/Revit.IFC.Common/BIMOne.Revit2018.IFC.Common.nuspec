@@ -12,6 +12,7 @@
     </dependencies>
   </metadata>
   <files>
-    <file src="bin\Release\*.dll" target="lib\net452" />
+    <file src="bin\Release\BIMOne.Revit.IFC.Common.dll" target="lib\net452" />
+    <file src="bin\Release\*.xsd" target="lib\net452" />
   </files>
 </package>
