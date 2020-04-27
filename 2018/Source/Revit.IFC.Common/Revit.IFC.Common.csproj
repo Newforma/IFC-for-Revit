@@ -103,6 +103,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="BIMOne.Revit2018.IFC.Common.nuspec" />
     <Content Include="IFC2X2_ADD1.xsd">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

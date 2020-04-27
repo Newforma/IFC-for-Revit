@@ -343,6 +343,21 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Antlr4>
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="BIMOne.Revit2020.IFC.Export.nuspec" />
+    <Content Include="IFC2X2_ADD1.exp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="IFC2X3_TC1.exp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="IFC4.exp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="IFCCertifiedEntitiesAndPSets.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
   <!--
     Always Import the appropriate *.OutputPath.targets file BEFORE the
     Revit.CSharp.targets file, otherwise VisualStudio will complain

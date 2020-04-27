@@ -324,6 +324,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Antlr4>
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="BIMOne.Revit2018.IFC.Export.nuspec" />
+    <Content Include="IFC4_ADD2.exp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
   <!--
     Always Import the appropriate *.OutputPath.targets file BEFORE the
     Revit.CSharp.targets file, otherwise VisualStudio will complain
