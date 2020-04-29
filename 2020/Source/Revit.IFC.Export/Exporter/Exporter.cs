@@ -37,6 +37,9 @@ using Revit.IFC.Common.Enums;
 using Autodesk.Revit.DB.ExternalService;
 using Revit.IFC.Export.Properties;
 using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Text;
+
 using Autodesk.Revit.DB.Steel;
 
 namespace Revit.IFC.Export.Exporter
@@ -987,12 +990,44 @@ namespace Revit.IFC.Export.Exporter
 #if IFC_OPENSOURCE
          // Find the alternate schema file from the open source install folder
          filePath = Path.Combine(Path.GetDirectoryName(Assembly.GetCallingAssembly().Location), schemaFileName);
+         filePath = TryGetShortPathName(filePath);
          if (!File.Exists(filePath))
 #endif
          {
             filePath = Path.Combine(DirectoryUtil.RevitProgramPath, "EDM", schemaFileName);
          }
          return filePath;
+      }
+
+      [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
+      private static extern int GetShortPathName(
+         [MarshalAs(UnmanagedType.LPTStr)]
+         string path,
+         [MarshalAs(UnmanagedType.LPTStr)]
+         StringBuilder shortPath,
+         int shortPathLength);
+
+      /// BIM One: to avoid an exception when there is an accent in the path...
+      private static string TryGetShortPathName(string filePath)
+      {
+         try
+         {
+            var shortPathBuilder = new StringBuilder(255);
+            if (GetShortPathName(filePath, shortPathBuilder, shortPathBuilder.Capacity) != 0)
+            {
+               var shortPath = shortPathBuilder.ToString();
+               if (!string.IsNullOrWhiteSpace(shortPath))
+               {
+                  return shortPath;
+               }
+            }
+
+            return filePath;
+         }
+         catch (Exception)
+         {
+            return filePath;
+         }
       }
 
       /// <summary>
