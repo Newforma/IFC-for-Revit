@@ -43,13 +43,13 @@ namespace Revit.IFC.Export.Utility
       static int _tolNoDecPrecision = 6;
       // ------
 
-      IDictionary<int, HashSet<int>> sortedFVert = new Dictionary<int, HashSet<int>>();
+      //IDictionary<int, HashSet<int>> sortedFVert = new Dictionary<int, HashSet<int>>();
 
       /// <summary>
       /// Constructor for the class, accepting the TriangulatedShellComponent from the result of body tessellation
       /// </summary>
       /// <param name="triangulatedBody"></param>
-      public TriangleMergeUtil (TriangulatedShellComponent triangulatedBody)
+      public TriangleMergeUtil(TriangulatedShellComponent triangulatedBody)
       {
          _geom = triangulatedBody;
       }
@@ -76,7 +76,7 @@ namespace Revit.IFC.Export.Utility
             double X = Math.Round(obj.X, _tolNoDecPrecision);
             double Y = Math.Round(obj.Y, _tolNoDecPrecision);
             double Z = Math.Round(obj.Z, _tolNoDecPrecision);
-            
+
             return X.GetHashCode() ^ Y.GetHashCode() ^ Z.GetHashCode();
          }
       }
@@ -145,7 +145,7 @@ namespace Revit.IFC.Export.Utility
          /// <returns>True if coincide</returns>
          public bool coincide(IndexSegment inputSegment)
          {
-            return ((startPindex == inputSegment.startPindex && endPIndex == inputSegment.endPIndex) 
+            return ((startPindex == inputSegment.startPindex && endPIndex == inputSegment.endPIndex)
                || (endPIndex == inputSegment.startPindex && startPindex == inputSegment.endPIndex));
          }
 
@@ -197,7 +197,7 @@ namespace Revit.IFC.Export.Utility
                vertices.Add(_geom.GetVertex(indexOuterBoundary[ii]));
             }
             normal = NormalByNewellMethod(vertices);
-        }
+         }
 
          /// <summary>
          /// Constructor taking in List of List of vertices. The first list will be the outer boundary and the rest are the inner boundaries
@@ -279,7 +279,7 @@ namespace Revit.IFC.Export.Utility
 
             for (int ii = 0; ii < vertxIndices.Count; ++ii)
             {
-               IndexSegment segm; 
+               IndexSegment segm;
                if (ii == vertxIndices.Count - 1)
                {
                   segm = new IndexSegment(vertxIndices[ii], vertxIndices[0]);
@@ -339,22 +339,6 @@ namespace Revit.IFC.Export.Utility
          return facesColl[_mergedFaceList.ElementAt(fIdx)].indexedInnerBoundaries;
       }
 
-      void SortVertAndFaces(int vIndex, int fIndex)
-      {
-         HashSet<int> facesOfVert;
-         if (!sortedFVert.TryGetValue(vIndex, out facesOfVert))
-         {
-            facesOfVert = new HashSet<int>();
-            facesOfVert.Add(fIndex);
-            sortedFVert.Add(vIndex, facesOfVert);
-         }
-         else
-         {
-            // Dict already contains the point, update the HashSet with this new face
-            facesOfVert.Add(fIndex);
-         }
-      }
-
       static XYZ NormalByNewellMethod(IList<XYZ> vertices)
       {
          XYZ normal;
@@ -400,8 +384,10 @@ namespace Revit.IFC.Export.Utility
       {
          int noTriangle = _geom.TriangleCount;
          int noVertices = _geom.VertexCount;
+         IEqualityComparer<XYZ> normalComparer = new vectorCompare();
+         Dictionary<XYZ, List<int>> faceSortedByNormal = new Dictionary<XYZ, List<int>>(normalComparer);
 
-         for (int ef = 0; ef<noTriangle; ++ef)
+         for (int ef = 0; ef < noTriangle; ++ef)
          {
             TriangleInShellComponent f = _geom.GetTriangle(ef);
             IList<int> vertIndex = new List<int>();
@@ -411,57 +397,40 @@ namespace Revit.IFC.Export.Utility
 
             IndexFace intF = new IndexFace(vertIndex);
             facesColl.Add(ef, intF);         // Keep faces in a dictionary and assigns ID
-            SortVertAndFaces(f.VertexIndex0, ef);
-            SortVertAndFaces(f.VertexIndex1, ef);
-            SortVertAndFaces(f.VertexIndex2, ef);
-         }
-
-         // After the above, we have a sorted polyhedron vertices that contains hashset of faces it belongs to
-         // Loop through the dictionary to merge faces that have the same normal (on the same plane)
-         foreach (KeyValuePair<int, HashSet<int>> dictItem in sortedFVert)
-         {
-            IEqualityComparer<XYZ> normalComparer = new vectorCompare();
-            Dictionary<XYZ, List<int>> faceSortedByNormal = new Dictionary<XYZ, List<int>>(normalComparer);
             List<int> fIDList;
 
-            foreach (int fID in dictItem.Value)
+            if (!faceSortedByNormal.TryGetValue(intF.normal, out fIDList))
             {
-               IndexFace f = facesColl[fID];
-
-               if (!faceSortedByNormal.TryGetValue(f.normal, out fIDList))
-               {
-                  fIDList = new List<int>();
-                  fIDList.Add(fID);
-                  faceSortedByNormal.Add(f.normal, fIDList);
-               }
-               else
-               {
-                  if (!fIDList.Contains(fID))
-                  {
-                     fIDList.Add(fID);
-                  }
-               }
+               fIDList = new List<int>();
+               fIDList.Add(ef);
+               faceSortedByNormal.Add(intF.normal, fIDList);
             }
-
-            foreach (KeyValuePair<XYZ, List<int>> fListDict in faceSortedByNormal)
+            else
             {
-               List<int> mergedFaceList = null;
-               if (fListDict.Value.Count > 1)
+               if (!fIDList.Contains(ef))
                {
-                  TryMergeFaces(fListDict.Value, out mergedFaceList);
-                  if (mergedFaceList != null && mergedFaceList.Count > 0)
-                  {
-                     // insert only new face indexes as the mergedlist from different vertices can be duplicated
-                     foreach (int fIdx in mergedFaceList)
-                        if (!_mergedFaceList.Contains(fIdx))
-                           _mergedFaceList.Add(fIdx);
-                  }
+                  fIDList.Add(ef);
                }
-               else
-                     if (!_mergedFaceList.Contains(fListDict.Value[0]))
-                  _mergedFaceList.Add(fListDict.Value[0]);    // No pair face, add it into the mergedList
             }
          }
+
+         foreach (KeyValuePair<XYZ, List<int>> fListDict in faceSortedByNormal)
+         {
+            List<int> mergedFaceList = null;
+            if (fListDict.Value.Count > 1)
+            {
+               TryMergeFaces(fListDict.Value, out mergedFaceList);
+               if (mergedFaceList != null && mergedFaceList.Count > 0)
+               {
+                  // insert only new face indexes as the mergedlist from different vertices can be duplicated
+                  foreach (int fIdx in mergedFaceList)
+                     if (!_mergedFaceList.Contains(fIdx))
+                        _mergedFaceList.Add(fIdx);
+               }
+            }
+            else if (!_mergedFaceList.Contains(fListDict.Value[0]))
+               _mergedFaceList.Add(fListDict.Value[0]);    // No pair face, add it into the mergedList
+         }         
       }
 
       /// <summary>
@@ -470,22 +439,18 @@ namespace Revit.IFC.Export.Utility
       /// <param name="inputFaceList"></param>
       /// <param name="outputFaceList"></param>
       /// <returns>True if done successfully</returns>
-      bool TryMergeFaces(List<int> inputFaceList, out List<int> outputFaceList)
+      void TryMergeFaces(List<int> inputFaceList, out List<int> outputFaceList)
       {
          outputFaceList = new List<int>();
          IndexFace firstF = facesColl[inputFaceList[0]];
-         //int prevFirstFIdx = 0;
-         HashSet<int> mergedFacesIdxList = new HashSet<int>();
-         mergedFacesIdxList.Add(inputFaceList[0]);
-
+         int currProcFace = inputFaceList[0];
          inputFaceList.RemoveAt(0);  // remove the first face from the list
-         int currEdgeIdx = 0;
          bool merged = false;
 
          IEqualityComparer<IndexSegment> segCompare = new SegmentCompare();
          IDictionary<IndexSegment, Tuple<IndexFace, int, int>> segmentOfFaceDict = new Dictionary<IndexSegment, Tuple<IndexFace, int, int>>(segCompare);
          IList<int> discardList = new List<int>();
-         for (int iFace=0; iFace < inputFaceList.Count; ++iFace)
+         for (int iFace = 0; iFace < inputFaceList.Count; ++iFace)
          {
             int fidx = inputFaceList[iFace];
             IndexFace IdxFace = facesColl[fidx];
@@ -499,21 +464,23 @@ namespace Revit.IFC.Export.Utility
                inputFaceList.Remove(fidx);
          discardList.Clear();
 
-         while (currEdgeIdx < firstF.outerAndInnerBoundaries.Count && inputFaceList.Count > 0)
+         while (inputFaceList.Count > 0)
          {
-            IndexSegment currEdge = firstF.outerAndInnerBoundaries[currEdgeIdx];
-            IndexSegment reversedEdge = currEdge.reverse();
+            IndexFace mergedFace = null;
+            for (int currEdgeIdx = 0; currEdgeIdx < firstF.outerAndInnerBoundaries.Count; currEdgeIdx++)
+            {
+               IndexSegment currEdge = firstF.outerAndInnerBoundaries[currEdgeIdx];
+               IndexSegment reversedEdge = currEdge.reverse();
 
-            { 
                IndexFace currFace = null;
                int currFaceIdx = -1;
                int idx = -1;
                Tuple<IndexFace, int, int> pairedFace = null;
+
                if (!segmentOfFaceDict.TryGetValue(reversedEdge, out pairedFace))
                {
                   if (!segmentOfFaceDict.TryGetValue(currEdge, out pairedFace))
                   {
-                     currEdgeIdx++;
                      merged = false;
                      continue;
                   }
@@ -532,7 +499,6 @@ namespace Revit.IFC.Export.Utility
                      {
                         // Something is wrong with this face (should not be here in the normal circumstance), discard it and continue
                         inputFaceList.Remove(currFaceIdx);
-                        currEdgeIdx++;
                         merged = false;
                         continue;
                      }
@@ -541,7 +507,6 @@ namespace Revit.IFC.Export.Utility
                         {
                            // Should not be here. If somehow here, discard the face and continue
                            inputFaceList.Remove(currFaceIdx);
-                           currEdgeIdx++;
                            merged = false;
                            continue;
                         }
@@ -734,12 +699,13 @@ namespace Revit.IFC.Export.Utility
                   }
                }
 
-               firstF = new IndexFace(newFaceVertsLoops);
+               mergedFace = new IndexFace(newFaceVertsLoops);
 
-               currEdgeIdx = 0;
-               reversedEdge = new IndexSegment(firstF.outerAndInnerBoundaries[currEdgeIdx].endPIndex, firstF.outerAndInnerBoundaries[currEdgeIdx].startPindex);
+               //currEdgeIdx = 0;
+               //reversedEdge = new IndexSegment(firstF.outerAndInnerBoundaries[0].endPIndex, firstF.outerAndInnerBoundaries[0].startPindex);
 
-               mergedFacesIdxList.Add(currFaceIdx);
+               // Insert the merged face idx into mergedFacesIdxList and remove it from the inputFaceList and segmentOfFacesDict
+               //mergedFacesIdxList.Add(currFaceIdx);
                inputFaceList.Remove(currFaceIdx);
 
                // Remove the merged face from segmentOfFaceDict
@@ -750,42 +716,21 @@ namespace Revit.IFC.Export.Utility
                }
 
                merged = true;
+               break;      // Once there is an edge merged, create a new face and continue the process of merging
             }
+
+            int lastFaceID = facesColl.Count;   // The new index is always the next one in the collection was inserted based on the seq order
+            if (mergedFace != null)
+               facesColl.Add(lastFaceID, mergedFace);
 
             if (!merged)
             {
-               currEdgeIdx++;
-            }
-            if (merged || currEdgeIdx == firstF.outerAndInnerBoundaries.Count)
-            {
-               int lastFaceID = facesColl.Count;   // The new index is always the next one in the collection was inserted based on the seq order
-
-               facesColl.Add(lastFaceID, firstF);
-               //prevFirstFIdx = lastFaceID;
-
-               // If there is no more face to process, add the merged face into the output list
-               if (inputFaceList.Count == 0)
-                  outputFaceList.Add(lastFaceID);
-
-               // Now loop through all the dictionary of the sortedVert and replace all merged face indexes with the new one
-               foreach (KeyValuePair<int, HashSet<int>> v in sortedFVert)
-               {
-                  HashSet<int> fIndexes = v.Value;
-                  bool replaced = false;
-                  foreach (int Idx in mergedFacesIdxList)
-                  {
-                     replaced |= fIndexes.Remove(Idx);
-                     _mergedFaceList.Remove(Idx);        // Remove the idx face also from _mergeFaceList as some faces might be left unmerged in the previous step(s)
-                  }
-                  if (replaced)
-                     fIndexes.Add(lastFaceID);   // replace the merged face indexes with the new merged face index
-               }
+               // No edge match for this face, add the face into the output face list and move to the next face in the input list
+               outputFaceList.Add(currProcFace);
 
                if (inputFaceList.Count > 0)
                {
                   firstF = facesColl[inputFaceList[0]];
-                  mergedFacesIdxList.Clear();
-                  mergedFacesIdxList.Add(inputFaceList[0]);
 
                   // Remove the merged face from segmentOfFaceDict
                   IList<IndexSegment> rem = firstF.outerAndInnerBoundaries;
@@ -793,22 +738,42 @@ namespace Revit.IFC.Export.Utility
                   {
                      segmentOfFaceDict.Remove(rem[cidx]);
                   }
+                  currProcFace = inputFaceList[0];  // keep the last processed item
                   inputFaceList.RemoveAt(0);  // remove the first face from the list
-                  currEdgeIdx = 0;
                   merged = false;
 
-                  // If there is still more face to process, add the merged face into the list to be processed futher
-                  // Add new face to segmentOfFaceDict
-                  IndexFace newFace = facesColl[lastFaceID];
-                  if (segmentOfFaceToDict(ref segmentOfFaceDict, ref newFace, lastFaceID))
-                  {
-                     inputFaceList.Add(lastFaceID);
-                  }
+                  // If there is no more face to process, add the merged face into the output list
+                  if (inputFaceList.Count == 0)
+                     outputFaceList.Add(currProcFace);
+               }
+            }
+            else
+            {
+               // If there is no more face to process, add the merged face into the output list
+               if (inputFaceList.Count == 0)
+                  outputFaceList.Add(lastFaceID);
+
+               if (inputFaceList.Count > 0)
+               {
+                  // use the current face as the next face as a merge candidate
+                  firstF = mergedFace;
+                  currProcFace = lastFaceID;
+                  merged = false;
                }
             }
          }
 
-         return merged;
+         // Finally, there may be multiple faces left because there are multiple disconnected faces at the same normal. Collect them and return
+         if (segmentOfFaceDict.Count > 0)
+         {
+            HashSet<int> indexFaces = new HashSet<int>();
+            foreach (KeyValuePair<IndexSegment,Tuple<IndexFace,int,int>> segmentFace in segmentOfFaceDict)
+            {
+               indexFaces.Add(segmentFace.Value.Item2);
+            }
+            foreach (int idxFace in indexFaces)
+               outputFaceList.Add(idxFace);
+         }
       }
 
       bool segmentOfFaceToDict(ref IDictionary<IndexSegment, Tuple<IndexFace, int, int>> segmentOfFaceDict, ref IndexFace theFace, int indexFace)
@@ -826,7 +791,7 @@ namespace Revit.IFC.Export.Utility
          catch
          {
             // If exception, it is likely that there is duplicate. Remove all segments of this face first to rollback
-            foreach(IndexSegment segDel in entriesToRollback)
+            foreach (IndexSegment segDel in entriesToRollback)
                segmentOfFaceDict.Remove(segDel);
             entriesToRollback.Clear();
          }

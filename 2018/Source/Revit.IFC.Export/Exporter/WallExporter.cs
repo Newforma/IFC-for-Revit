@@ -25,6 +25,7 @@ using Revit.IFC.Export.Utility;
 using Revit.IFC.Export.Toolkit;
 using Revit.IFC.Export.Exporter.PropertySet;
 using Revit.IFC.Common.Utility;
+using Revit.IFC.Common.Enums;
 
 namespace Revit.IFC.Export.Exporter
 {
@@ -482,7 +483,7 @@ namespace Revit.IFC.Export.Exporter
             // Create TessellatedRep geometry if it is Reference View.
             if (ExporterCacheManager.ExportOptionsCache.ExportAs4ReferenceView)
             {
-               
+
                List<GeometryObject> geomList = new List<GeometryObject>();
                // The native function AddClippingsToBaseExtrusion will create the IfcBooleanClippingResult entity and therefore here we need to delete it
                foreach (IFCAnyHandle item in bodyItems)
@@ -585,7 +586,7 @@ namespace Revit.IFC.Export.Exporter
       /// <param name="overrideLevelId">The level id.</param>
       /// <param name="range">The range to be exported for the element.</param>
       /// <returns>The exported wall handle.</returns>
-      public static IFCAnyHandle ExportWallBase(ExporterIFC exporterIFC, Element element, IList<IList<IFCConnectedWallData>> connectedWalls,
+      public static IFCAnyHandle ExportWallBase(ExporterIFC exporterIFC, string ifcEnumType, Element element, IList<IList<IFCConnectedWallData>> connectedWalls,
           GeometryElement geometryElement, ProductWrapper origWrapper, ElementId overrideLevelId, IFCRange range)
       {
          if (element == null)
@@ -814,16 +815,17 @@ namespace Revit.IFC.Export.Exporter
 
                         if (ExporterCacheManager.ExportOptionsCache.ExportAs4ReferenceView)
                         {
-                           IList<int> segmentIndex = null;
-                           IList<IList<double>> pointList = GeometryUtil.PointListFromCurve(exporterIFC, trimmedCurve, null, null, out segmentIndex);
+                           IFCAnyHandle axisHnd = GeometryUtil.CreatePolyCurveFromCurve(exporterIFC, trimmedCurve);
+                           //IList<int> segmentIndex = null;
+                           //IList<IList<double>> pointList = GeometryUtil.PointListFromCurve(exporterIFC, trimmedCurve, null, null, out segmentIndex);
 
-                           // For now because of no support in creating IfcLineIndex and IfcArcIndex yet, it is set to null
-                           //IList<IList<int>> segmentIndexList = new List<IList<int>>();
-                           //segmentIndexList.Add(segmentIndex);
-                           IList<IList<int>> segmentIndexList = null;
+                           //// For now because of no support in creating IfcLineIndex and IfcArcIndex yet, it is set to null
+                           ////IList<IList<int>> segmentIndexList = new List<IList<int>>();
+                           ////segmentIndexList.Add(segmentIndex);
+                           //IList<IList<int>> segmentIndexList = null;
 
-                           IFCAnyHandle pointListHnd = IFCInstanceExporter.CreateCartesianPointList3D(file, pointList);
-                           IFCAnyHandle axisHnd = IFCInstanceExporter.CreateIndexedPolyCurve(file, pointListHnd, segmentIndexList, false);
+                           //IFCAnyHandle pointListHnd = IFCInstanceExporter.CreateCartesianPointList3D(file, pointList);
+                           //IFCAnyHandle axisHnd = IFCInstanceExporter.CreateIndexedPolyCurve(file, pointListHnd, segmentIndexList, false);
                            axisItems = new List<IFCAnyHandle>();
                            if (!IFCAnyHandleUtil.IsNullOrHasNoValue(axisHnd))
                            {
@@ -960,7 +962,7 @@ namespace Revit.IFC.Export.Exporter
                      else
                         elemGUID = GUIDUtil.CreateGUID();
 
-                     string ifcType = IFCValidateEntry.GetValidIFCType(element, null);
+                     //string ifcType = IFCValidateEntry.GetValidIFCPredefinedType(/*element,*/ null);
 
                      // For Foundation and Retaining walls, allow exporting as IfcFooting instead.
                      bool exportAsFooting = false;
@@ -977,8 +979,8 @@ namespace Revit.IFC.Export.Exporter
                               {
                                  // In this case, allow potential to export foundation and retaining walls as footing.
                                  string enumTypeValue = null;
-                                 IFCExportType exportType = ExporterUtil.GetExportType(exporterIFC, wallElement, out enumTypeValue);
-                                 if (exportType == IFCExportType.IfcFooting)
+                                 IFCExportInfoPair exportType = ExporterUtil.GetExportType(exporterIFC, wallElement, out enumTypeValue);
+                                 if (exportType.ExportInstance == IFCEntityType.IfcFooting)
                                     exportAsFooting = true;
                               }
                            }
@@ -990,7 +992,7 @@ namespace Revit.IFC.Export.Exporter
                         if (exportAsFooting)
                         {
                            wallHnd = IFCInstanceExporter.CreateFooting(exporterIFC, element, elemGUID, ownerHistory,
-                               localPlacement, exportParts ? null : prodRep, ifcType);
+                               localPlacement, exportParts ? null : prodRep, ifcEnumType);
                         }
                         else
                         {
@@ -1010,13 +1012,13 @@ namespace Revit.IFC.Export.Exporter
 
                            if (exportAsWall)
                            {
-                              wallHnd = IFCInstanceExporter.CreateWall(exporterIFC, element, elemGUID, ownerHistory, 
-                                      localPlacement, prodRep, ifcType);
+                              wallHnd = IFCInstanceExporter.CreateWall(exporterIFC, element, elemGUID, ownerHistory,
+                                      localPlacement, prodRep, ifcEnumType);
                            }
                            else
                            {
                               wallHnd = IFCInstanceExporter.CreateWallStandardCase(exporterIFC, element, elemGUID, ownerHistory,
-                                  localPlacement, prodRep, ifcType);
+                                  localPlacement, prodRep, ifcEnumType);
                            }
                         }
 
@@ -1054,13 +1056,13 @@ namespace Revit.IFC.Export.Exporter
                      {
                         if (exportAsFooting)
                         {
-                           wallHnd = IFCInstanceExporter.CreateFooting(exporterIFC, element, elemGUID, ownerHistory, 
-                               localPlacement, exportParts ? null : prodRep, ifcType);
+                           wallHnd = IFCInstanceExporter.CreateFooting(exporterIFC, element, elemGUID, ownerHistory,
+                               localPlacement, exportParts ? null : prodRep, ifcEnumType);
                         }
                         else
                         {
-                           wallHnd = IFCInstanceExporter.CreateWall(exporterIFC, element, elemGUID, ownerHistory, 
-                               localPlacement, exportParts ? null : prodRep, ifcType);
+                           wallHnd = IFCInstanceExporter.CreateWall(exporterIFC, element, elemGUID, ownerHistory,
+                               localPlacement, exportParts ? null : prodRep, ifcEnumType);
                         }
 
                         if (exportParts)
@@ -1110,7 +1112,7 @@ namespace Revit.IFC.Export.Exporter
                                geometryElement, localWrapper, wallLevelId, Toolkit.IFCLayerSetDirection.Axis2, !exportedAsWallWithAxis, null);
                      }
 
-                     ExportWallType(exporterIFC, localWrapper, wallHnd, element, matId, exportedAsWallWithAxis, exportAsFooting);
+                     ExportWallType(exporterIFC, localWrapper, wallHnd, element, matId, exportedAsWallWithAxis, exportAsFooting, ifcEnumType);
 
                      SpaceBoundingElementUtil.RegisterSpaceBoundingElementHandle(exporterIFC, wallHnd, element.Id, wallLevelId);
 
@@ -1130,14 +1132,13 @@ namespace Revit.IFC.Export.Exporter
       /// <param name="connectedWalls">Information about walls joined to this wall.</param>
       /// <param name="geometryElement">The geometry element.</param>
       /// <param name="productWrapper">The ProductWrapper.</param>
-      public static void ExportWall(ExporterIFC exporterIFC, Element element, IList<IList<IFCConnectedWallData>> connectedWalls, GeometryElement geometryElement,
+      public static void ExportWall(ExporterIFC exporterIFC, string ifcEnumType, Element element, IList<IList<IFCConnectedWallData>> connectedWalls, GeometryElement geometryElement,
          ProductWrapper productWrapper)
       {
          // Check the intended IFC entity or type name is in the exclude list specified in the UI
-         Common.Enums.IFCEntityType elementClassTypeEnum;
-         if (Enum.TryParse<Common.Enums.IFCEntityType>("IfcWall", out elementClassTypeEnum))
-            if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
-               return;
+         Common.Enums.IFCEntityType elementClassTypeEnum = Common.Enums.IFCEntityType.IfcWall;
+         if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
+            return;
 
          IList<IFCAnyHandle> createdWalls = new List<IFCAnyHandle>();
 
@@ -1151,13 +1152,15 @@ namespace Revit.IFC.Export.Exporter
             IList<IFCRange> ranges = new List<IFCRange>();
             if (wallElement != null && geometryElement != null)
             {
-               LevelUtil.CreateSplitLevelRangesForElement(exporterIFC, IFCExportType.IfcWall, element, out levels, out ranges);
+               IFCExportInfoPair exportInfo = new IFCExportInfoPair();
+               exportInfo.SetValueWithPair(Common.Enums.IFCEntityType.IfcWall);
+               LevelUtil.CreateSplitLevelRangesForElement(exporterIFC, exportInfo, element, out levels, out ranges);
             }
 
             int numPartsToExport = ranges.Count;
             if (numPartsToExport == 0)
             {
-               IFCAnyHandle wallElemHnd = ExportWallBase(exporterIFC, element, connectedWalls, geometryElement, productWrapper, ElementId.InvalidElementId, null);
+               IFCAnyHandle wallElemHnd = ExportWallBase(exporterIFC, ifcEnumType, element, connectedWalls, geometryElement, productWrapper, ElementId.InvalidElementId, null);
                if (!IFCAnyHandleUtil.IsNullOrHasNoValue(wallElemHnd))
                   createdWalls.Add(wallElemHnd);
             }
@@ -1168,7 +1171,7 @@ namespace Revit.IFC.Export.Exporter
                   for (int ii = 0; ii < numPartsToExport; ii++)
                   {
                      rangeSetter.IncreaseRangeIndex();
-                     IFCAnyHandle wallElemHnd = ExportWallBase(exporterIFC, element, connectedWalls, geometryElement, productWrapper, levels[ii], ranges[ii]);
+                     IFCAnyHandle wallElemHnd = ExportWallBase(exporterIFC, ifcEnumType, element, connectedWalls, geometryElement, productWrapper, levels[ii], ranges[ii]);
                      if (!IFCAnyHandleUtil.IsNullOrHasNoValue(wallElemHnd))
                         createdWalls.Add(wallElemHnd);
                   }
@@ -1192,7 +1195,7 @@ namespace Revit.IFC.Export.Exporter
          }
 
          if (createdWalls.Count == 0)
-            ExportWallBase(exporterIFC, element, connectedWalls, geometryElement, productWrapper, ElementId.InvalidElementId, null);
+            ExportWallBase(exporterIFC, ifcEnumType, element, connectedWalls, geometryElement, productWrapper, ElementId.InvalidElementId, null);
       }
 
       /// <summary>
@@ -1237,8 +1240,9 @@ namespace Revit.IFC.Export.Exporter
                CurtainSystemExporter.ExportWall(exporterIFC, wallElement, productWrapper);
             else
             {
+               string ifcEnumType = (wallTypeKind == WallKind.Basic) ? "STANDARD" : null;
                // ExportWall may decide to export as an IfcFooting for some retaining and foundation walls.
-               ExportWall(exporterIFC, wallElement, connectedWalls, geometryElement, productWrapper);
+               ExportWall(exporterIFC, ifcEnumType, wallElement, connectedWalls, geometryElement, productWrapper);
             }
 
             // create join information.
@@ -1331,7 +1335,7 @@ namespace Revit.IFC.Export.Exporter
             using (PlacementSetter setter = PlacementSetter.Create(exporterIFC, element, null, orientationTrf, overrideLevelId))
             {
                IFCAnyHandle localPlacement = setter.LocalPlacement;
-               wallHnd = IFCInstanceExporter.CreateWall(exporterIFC, element, elemGUID, ownerHistory, 
+               wallHnd = IFCInstanceExporter.CreateWall(exporterIFC, element, elemGUID, ownerHistory,
                    localPlacement, null, "NOTDEFINED");
 
                if (exportParts)
@@ -1361,7 +1365,7 @@ namespace Revit.IFC.Export.Exporter
       /// <param name="isStandard">True if it is a standard wall, false otherwise.</param>
       /// <param name="asFooting">Export as IfcFootingType instead.</param>
       public static void ExportWallType(ExporterIFC exporterIFC, ProductWrapper wrapper, IFCAnyHandle elementHandle, Element element, ElementId overrideMaterialId,
-          bool isStandard, bool asFooting)
+          bool isStandard, bool asFooting, string ifcTypeEnum)
       {
          if (elementHandle == null || element == null)
             return;
@@ -1382,9 +1386,9 @@ namespace Revit.IFC.Export.Exporter
 
          // Property sets will be set later.
          if (asFooting)
-            wallType = IFCInstanceExporter.CreateFootingType(exporterIFC.GetFile(), elementType, null, null, null);
+            wallType = IFCInstanceExporter.CreateFootingType(exporterIFC.GetFile(), elementType, null, null, ifcTypeEnum);
          else
-            wallType = IFCInstanceExporter.CreateWallType(exporterIFC.GetFile(), elementType,  null, null, isStandard ? "STANDARD" : "NOTDEFINED");
+            wallType = IFCInstanceExporter.CreateWallType(exporterIFC.GetFile(), elementType, null, null, ifcTypeEnum);
 
          wrapper.RegisterHandleWithElementType(elementType as ElementType, wallType, null);
 

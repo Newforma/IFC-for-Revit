@@ -50,10 +50,9 @@ namespace Revit.IFC.Export.Exporter
             return null;
 
          // Check the intended IFC entity or type name is in the exclude list specified in the UI
-         Common.Enums.IFCEntityType elementClassTypeEnum;
-         if (Enum.TryParse<Common.Enums.IFCEntityType>("IfcBuildingElementProxy", out elementClassTypeEnum))
-            if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
-               return null;
+         Common.Enums.IFCEntityType elementClassTypeEnum = Common.Enums.IFCEntityType.IfcBuildingElementProxy;
+         if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
+            return null;
 
          IFCFile file = exporterIFC.GetFile();
          IFCAnyHandle buildingElementProxy = null;

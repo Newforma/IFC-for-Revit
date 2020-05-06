@@ -42,7 +42,11 @@ namespace Revit.IFC.Export.Exporter.PropertySet
       /// </summary>
       string m_Name = String.Empty;
 
-      string m_Description = String.Empty;
+      /// <summary>
+      /// The optional description of the property set or quantity.  Null by default.
+      /// </summary>
+      string m_Description = null;
+
       /// <summary>
       /// The element id of the view schedule generating this Description, if appropriate.
       /// </summary>
@@ -91,15 +95,31 @@ namespace Revit.IFC.Export.Exporter.PropertySet
       }
 
       /// <summary>
+      /// 
+      /// </summary>
+      /// <param name="handle"></param>
+      /// <returns></returns>
+      public bool IsSubTypeOfEntityTypes(IFCEntityType ifcEntityType)
+      {
+         var ifcEntitySchemaTree = IfcSchemaEntityTree.GetEntityDictFor(ExporterCacheManager.ExportOptionsCache.FileVersion);
+         if (ifcEntitySchemaTree == null || ifcEntitySchemaTree.Count == 0)
+            return false;
+
+         // Note that although EntityTypes is represented as a set, we still need to go through each item in the last to check for subtypes.
+         foreach (IFCEntityType entityType in EntityTypes)
+         {
+            if (IfcSchemaEntityTree.IsSubTypeOf(ifcEntityType.ToString(), entityType.ToString(), strict: false))
+               return true;
+         }
+         return false;
+      }
+
+      /// <summary>
       /// Identifies if the input handle matches the type of element, and optionally the object type, 
       /// to which this description applies.
       /// </summary>
-      /// <param name="handle">
-      /// The handle.
-      /// </param>
-      /// <returns>
-      /// True if it matches, false otherwise.
-      /// </returns>
+      /// <param name="handle">The handle.</param>
+      /// <returns>True if it matches, false otherwise.</returns>
       public bool IsAppropriateType(IFCAnyHandle handle)
       {
          if (handle == null || !IsSubTypeOfEntityTypes(handle))
@@ -182,7 +202,17 @@ namespace Revit.IFC.Export.Exporter.PropertySet
       public string Name
       {
          get { return m_Name; }
-         set { m_Name = value; }
+         set
+         {
+            m_Name = value;
+
+            // We will try to set the SubElementIndex based on the name of the PSet.  Only a few have entries.
+            IFCCommonPSets psetName;
+            if (Enum.TryParse<IFCCommonPSets>(m_Name, out psetName))
+               SubElementIndex = (int)psetName;
+            else
+               SubElementIndex = -1;
+         }
       }
 
       public string DescriptionOfSet

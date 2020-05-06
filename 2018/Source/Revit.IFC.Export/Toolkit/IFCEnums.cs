@@ -1655,7 +1655,7 @@ namespace Revit.IFC.Export.Toolkit
    /// <summary>
    /// Defines the basic configuration of the ramps in terms of the different ramp shapes. 
    /// </summary>
-   public enum IFCRampType
+   public enum IFCRamp
    {
       Straight_Run_Ramp,
       Two_Straight_Run_Ramp,
@@ -1670,7 +1670,7 @@ namespace Revit.IFC.Export.Toolkit
    /// <summary>
    /// Defines the basic configuration of the stairs in terms of the different stair shapes. 
    /// </summary>
-   public enum IFCStairType
+   public enum IFCStair
    {
       Straight_Run_Stair,
       Two_Straight_Run_Stair,
@@ -1810,6 +1810,14 @@ namespace Revit.IFC.Export.Toolkit
    {
       UserDefined,
       NotDefined
+   }
+
+   public enum IFCVibrationIsolatorType
+   {
+      COMPRESSION
+  , SPRING
+  , USERDEFINED
+  , NOTDEFINED
    }
 
    /// <summary>

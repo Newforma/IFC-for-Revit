@@ -23,7 +23,7 @@ namespace Revit.IFC.Common.Utility
             return false;     // The schema file has been processed and loaded before
 
          loadedSchema = ifcxmlSchemaFile.Name;
-         IfcSchemaEntityTree.ResetAll();
+         IfcSchemaEntityTree.Initialize(loadedSchema);
          XmlTextReader reader = new XmlTextReader(ifcxmlSchemaFile.FullName);
          XmlSchema theSchema = XmlSchema.Read(reader, ValidationCallback);
          foreach (XmlSchemaObject item in theSchema.Items)
@@ -56,7 +56,7 @@ namespace Revit.IFC.Common.Utility
                   parentName = parentComplexType.BaseTypeName.Name;
             }
 
-            IfcSchemaEntityTree.Add(entityName, parentName, isAbstract:ct.IsAbstract);
+            IfcSchemaEntityTree.Add(entityName, parentName, isAbstract: ct.IsAbstract);
          }
          return true;
       }

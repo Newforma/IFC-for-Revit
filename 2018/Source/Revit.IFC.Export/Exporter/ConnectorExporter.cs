@@ -61,6 +61,10 @@ namespace Revit.IFC.Export.Exporter
       // If originalConnector != null, use that connector for AddConnection routine, instead of connector.
       private static void ProcessConnections(ExporterIFC exporterIFC, Connector connector, Connector originalConnector)
       {
+         // Port connection is not allowed for IFC4RV MVD
+         if (ExporterCacheManager.ExportOptionsCache.ExportAs4ReferenceView)
+            return;
+
          Domain domain = connector.Domain;
          bool isElectricalDomain = (domain == Domain.DomainElectrical);
          bool supportsDirection = (domain == Domain.DomainHvac || domain == Domain.DomainPiping);
@@ -120,7 +124,7 @@ namespace Revit.IFC.Export.Exporter
                IFCAnyHandle ownerHistory = ExporterCacheManager.OwnerHistoryHandle;
                IFCAnyHandle port = IFCInstanceExporter.CreateDistributionPort(exporterIFC, null, guid, ownerHistory, localPlacement, null, flowDir);
                string portName = "Port_" + hostElement.Id;
-               IFCAnyHandleUtil.SetAttribute(port, "Name", portName);
+               IFCAnyHandleUtil.OverrideNameAttribute(port, portName);
                string portType = "Flow";   // Assigned as Port.Description
                IFCAnyHandleUtil.SetAttribute(port, "Description", portType);
 
@@ -223,6 +227,10 @@ namespace Revit.IFC.Export.Exporter
 
       static void AddConnection(ExporterIFC exporterIFC, Connector connector, Connector connected, bool isBiDirectional, bool isElectricalDomain)
       {
+         // Port connection is not allowed in IFC4RV MVD
+         if (ExporterCacheManager.ExportOptionsCache.ExportAs4ReferenceView)
+            return;
+
          Element inElement = connector.Owner;
          Element outElement = connected.Owner;
 
@@ -297,7 +305,7 @@ namespace Revit.IFC.Export.Exporter
             string portName = "InPort_" + inElement.Id;
             string portType = "Flow";   // Assigned as Port.Description
             portIn = IFCInstanceExporter.CreateDistributionPort(exporterIFC, null, guid, ownerHistory, localPlacement, null, flowDir);
-            IFCAnyHandleUtil.SetAttribute(portIn, "Name", portName);
+            IFCAnyHandleUtil.OverrideNameAttribute(portIn, portName);
             IFCAnyHandleUtil.SetAttribute(portIn, "Description", portType);
 
             // Attach the port to the element
@@ -314,8 +322,9 @@ namespace Revit.IFC.Export.Exporter
             IFCAnyHandle localPlacement = CreateLocalPlacementForConnector(exporterIFC, connected, outElementIFCHandle, flowDir);
             string portName = "OutPort_" + outElement.Id;
             string portType = "Flow";   // Assigned as Port.Description
+
             portOut = IFCInstanceExporter.CreateDistributionPort(exporterIFC, null, guid, ownerHistory, localPlacement, null, flowDir);
-            IFCAnyHandleUtil.SetAttribute(portOut, "Name", portName);
+            IFCAnyHandleUtil.OverrideNameAttribute(portOut, portName);
             IFCAnyHandleUtil.SetAttribute(portOut, "Description", portType);
 
             // Attach the port to the element
@@ -347,7 +356,6 @@ namespace Revit.IFC.Export.Exporter
          catch
          {
          }
-
 
          if (isElectricalDomain)
          {

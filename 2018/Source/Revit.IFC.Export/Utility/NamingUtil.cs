@@ -71,17 +71,14 @@ namespace Revit.IFC.Export.Utility
       /// <summary>
       /// Checks if two strings are equal ignoring case and spaces.
       /// </summary>
-      /// <param name="string1">
-      /// The string to be compared.
-      /// </param>
-      /// <param name="string2">
-      /// The other string to be compared.
-      /// </param>
-      /// <returns>
-      /// True if they are equal, false otherwise.
-      /// </returns>
+      /// <param name="string1">The string to be compared.</param>
+      /// <param name="string2">The other string to be compared.</param>
+      /// <returns>True if they are equal, false otherwise.</returns>
       public static bool IsEqualIgnoringCaseAndSpaces(string string1, string string2)
       {
+         if (string1 == null || string2 == null)
+            return (string1 == string2);
+
          string nospace1 = RemoveSpaces(string1);
          string nospace2 = RemoveSpaces(string2);
          return (string.Compare(nospace1, nospace2, true) == 0);
@@ -128,19 +125,19 @@ namespace Revit.IFC.Export.Utility
 
          if (element != null)
          {
-            if (ParameterUtil.GetStringValueFromElement(element, element.Id, paramName, out paramValue) != null && !string.IsNullOrEmpty(paramValue))
+            if (ParameterUtil.GetStringValueFromElement(element, paramName, out paramValue) != null && !string.IsNullOrEmpty(paramValue))
             {
                string propertyValue = null;
                string paramValuetrim = paramValue.Trim();
-               //// This is kind of hack to quickly check whether we need to parse the parameter or not by checking that the value is enclosed by "{ }" or "u{ }" for unique value
-               //if (((paramValuetrim.Length > 1 && paramValuetrim[0] == '{') || (paramValuetrim.Length > 2 && paramValuetrim[1] == '{')) && (paramValuetrim[paramValuetrim.Length-1] == '}'))
-               //{
-                  //ParamExprResolver pResv = new ParamExprResolver(element, paramName, paramValuetrim);
-                  //propertyValue = pResv.GetStringValue();
-                  //if (string.IsNullOrEmpty(propertyValue))
-                     //propertyValue = paramValue;   // return the original paramValue
-               //}
-               //else
+               // This is kind of hack to quickly check whether we need to parse the parameter or not by checking that the value is enclosed by "{ }" or "u{ }" for unique value
+               if (((paramValuetrim.Length > 1 && paramValuetrim[0] == '{') || (paramValuetrim.Length > 2 && paramValuetrim[1] == '{')) && (paramValuetrim[paramValuetrim.Length - 1] == '}'))
+               {
+                  ParamExprResolver pResv = new ParamExprResolver(element, paramName, paramValuetrim);
+                  propertyValue = pResv.GetStringValue();
+                  if (string.IsNullOrEmpty(propertyValue))
+                     propertyValue = paramValue;   // return the original paramValue
+               }
+               else
                   propertyValue = paramValue;   // return the original paramValue
 
                //return paramValue;
@@ -151,20 +148,6 @@ namespace Revit.IFC.Export.Utility
          return originalValue;
       }
 
-      public static string GetNameOverride(IFCAnyHandle handle, Element element, string originalValue)
-      {
-         List<Exporter.PropertySet.AttributeEntry> entries = ExporterCacheManager.AttributeCache.GetEntry(handle, Exporter.PropertySet.PropertyType.Label, "Name");
-         if (entries != null)
-         {
-            foreach (Exporter.PropertySet.AttributeEntry entry in entries)
-            {
-               string result = entry.AsString(element);
-               if (result != null)
-                  return result;
-            }
-         }
-         return GetNameOverride(element, originalValue);
-      }
       /// <summary>
       /// Gets override name from element.
       /// </summary>
@@ -189,7 +172,7 @@ namespace Revit.IFC.Export.Utility
             //if NameOverride is not used or does not exist, test for the actual IFC attribute name: Name (using parameter name: IfcName)
             nameOverride = "IfcName";
             overrideValue = GetOverrideStringValue(element, nameOverride, originalValue);
-            if (!string.IsNullOrEmpty(overrideValue) && overrideValue.Equals(originalValue)
+            if ((string.IsNullOrEmpty(overrideValue) || overrideValue.Equals(originalValue))
                && (element is ElementType || element is FamilySymbol))
             {
                nameOverride = "IfcName[Type]";
@@ -201,6 +184,20 @@ namespace Revit.IFC.Export.Utility
          //overrideValue = GetCleanName(overrideValue);
          //GetOverrideStringValue will return the override value from the parameter specified, otherwise it will return the originalValue
          return overrideValue;
+      }
+      public static string GetNameOverride(IFCAnyHandle handle, Element element, string originalValue)
+      {
+         List<Exporter.PropertySet.AttributeEntry> entries = ExporterCacheManager.AttributeCache.GetEntry(handle, Exporter.PropertySet.PropertyType.Label, "Name");
+         if (entries != null)
+         {
+            foreach (Exporter.PropertySet.AttributeEntry entry in entries)
+            {
+               string result = entry.AsString(element);
+               if (result != null)
+                  return result;
+            }
+         }
+         return GetNameOverride(element, originalValue);
       }
 
       private static System.Text.RegularExpressions.Regex g_rxMixedName = null;
@@ -262,6 +259,32 @@ namespace Revit.IFC.Export.Utility
          return GetLongNameOverride(element, originalValue);
       }
 
+      /// <summary>
+      /// Gets override description from element.
+      /// </summary>
+      /// <param name="element">
+      /// The element.
+      /// </param>
+      /// <param name="originalValue">
+      /// The original value.
+      /// </param>
+      /// <returns>
+      /// The string contains the description string value.
+      /// </returns>
+      public static string GetDescriptionOverride(Element element, string originalValue)
+      {
+         string nameOverride = "IfcDescription";
+         string overrideValue = GetOverrideStringValue(element, nameOverride, originalValue);
+         if ((string.IsNullOrEmpty(overrideValue) || overrideValue.Equals(originalValue))
+            && (element is ElementType || element is FamilySymbol))
+         {
+            nameOverride = "IfcDescription[Type]";
+            overrideValue = GetOverrideStringValue(element, nameOverride, originalValue);
+         }
+         //GetOverrideStringValue will return the override value from the parameter specified, otherwise it will return the originalValue
+         return overrideValue;
+      }
+
       public static string GetDescriptionOverride(IFCAnyHandle handle, Element element, string originalValue)
       {
          List<Exporter.PropertySet.AttributeEntry> entries = ExporterCacheManager.AttributeCache.GetEntry(handle, Exporter.PropertySet.PropertyType.Text, "Description");
@@ -275,47 +298,6 @@ namespace Revit.IFC.Export.Utility
             }
          }
          return GetDescriptionOverride(element, originalValue);
-      }
-      /// <summary>
-      /// Gets override description from element.
-      /// </summary>
-      /// <param name="element">
-      /// The element.
-      /// </param>
-      /// <param name="originalValue">
-      /// The original value.
-      /// </param>
-      /// <returns>
-      /// The string contains the description string value.
-      /// </returns>
-
-      public static string GetDescriptionOverride(Element element, string originalValue)
-      {
-         string nameOverride = "IfcDescription";
-         string overrideValue = GetOverrideStringValue(element, nameOverride, originalValue);
-         if (!string.IsNullOrEmpty(overrideValue) && overrideValue.Equals(originalValue) 
-            && (element is ElementType || element is FamilySymbol))
-         {
-            nameOverride = "IfcDescription[Type]";
-            overrideValue = GetOverrideStringValue(element, nameOverride, originalValue);
-         }
-         //GetOverrideStringValue will return the override value from the parameter specified, otherwise it will return the originalValue
-         return overrideValue;
-      }
-
-      public static string GetObjectTypeOverride(IFCAnyHandle handle, Element element, string originalValue)
-      {
-         List<Exporter.PropertySet.AttributeEntry> entries = ExporterCacheManager.AttributeCache.GetEntry(handle, Exporter.PropertySet.PropertyType.Label, "ObjectType");
-         if (entries != null)
-         {
-            foreach (Exporter.PropertySet.AttributeEntry entry in entries)
-            {
-               string result = entry.AsString(element);
-               if (result != null)
-                  return result;
-            }
-         }
-         return GetObjectTypeOverride(element, originalValue);
       }
       /// <summary>
       /// Gets override object type from element.
@@ -340,7 +322,20 @@ namespace Revit.IFC.Export.Utility
          //GetOverrideStringValue will return the override value from the parameter specified, otherwise it will return the originalValue
          return overrideValue;
       }
-
+      public static string GetObjectTypeOverride(IFCAnyHandle handle, Element element, string originalValue)
+      {
+         List<Exporter.PropertySet.AttributeEntry> entries = ExporterCacheManager.AttributeCache.GetEntry(handle, Exporter.PropertySet.PropertyType.Label, "ObjectType");
+         if (entries != null)
+         {
+            foreach (Exporter.PropertySet.AttributeEntry entry in entries)
+            {
+               string result = entry.AsString(element);
+               if (result != null)
+                  return result;
+            }
+         }
+         return GetObjectTypeOverride(element, originalValue);
+      }
       /// <summary>
       /// Gets Tag override from element.
       /// </summary>
@@ -384,9 +379,13 @@ namespace Revit.IFC.Export.Utility
          ElementType elementType = (isType ? element : element.Document.GetElement(element.GetTypeId())) as ElementType;
          if (elementType != null)
          {
-            familyName = elementType.FamilyName;
-            if (familyName == "???")
-               familyName = "";
+            // This maintains the same behavior as the previous export.
+            if (!isType || !(elementType is FamilySymbol))
+            {
+               familyName = elementType.FamilyName;
+               if (familyName == "???")
+                  familyName = "";
+            }
          }
 
          string fullName = familyName;
@@ -543,26 +542,58 @@ namespace Revit.IFC.Export.Utility
          return elementName;
       }
 
+      public static string GetFamilyAndTypeName(Element element)
+      {
+         if (element == null)
+            return null;
+
+         string familyName = null;
+         string typeName = null;
+
+         ElementType elementType = element.Document.GetElement(element.GetTypeId()) as ElementType;
+         if (elementType != null)
+         {
+            typeName = elementType.Name;
+            if (typeName == "???")
+               typeName = "";
+
+            familyName = elementType.FamilyName;
+            if (familyName == "???")
+               familyName = "";
+         }
+
+         // set famSym name.
+         if (!string.IsNullOrEmpty(familyName))
+         {
+            if (!string.IsNullOrEmpty(typeName))
+               return familyName + ":" + typeName;
+
+            return familyName;
+         }
+
+         return typeName;
+      }
+
       /// <summary>
       /// Creates an IFC object name from export state.
       /// </summary>
-      /// <remarks>
-      /// It is combined with family name and element type id.
-      /// </remarks>
-      /// <param name="exporterIFC">
-      /// The ExporterIFC object.
-      /// </param>
-      /// <param name="element">
-      /// The element.
-      /// </param>
-      /// <returns>
-      /// The string contains the name string value.
-      /// </returns>
+      /// <remarks>It is combined with family name and element type id.</remarks>
+      /// <param name="exporterIFC">The ExporterIFC object.</param>
+      /// <param name="element">The element.</param>
+      /// <returns>The name string value, or null if there is none.</returns>
       public static string CreateIFCObjectName(ExporterIFC exporterIFC, Element element)
       {
+         // This maintains the same behavior as the previous export.
+         if (element is FamilyInstance)
+         {
+            FamilySymbol familySymbol = (element as FamilyInstance).Symbol;
+            if (familySymbol != null)
+               return familySymbol.Name;
+         }
+
          ElementId typeId = element != null ? element.GetTypeId() : ElementId.InvalidElementId;
 
-         string objectName = exporterIFC.GetFamilyName();
+         string objectName = GetFamilyAndTypeName(element);
          if (typeId != ElementId.InvalidElementId)
          {
             if (objectName == "")
@@ -570,7 +601,8 @@ namespace Revit.IFC.Export.Utility
             else
                return (objectName + ":" + typeId.ToString());
          }
-         return "";
+
+         return null;
       }
 
       /// <summary>
@@ -738,7 +770,7 @@ namespace Revit.IFC.Export.Utility
          // Get a profile name. It is by default set to the type (familySymbol) name, but can be overridden by IfcProfileName[Type] shared parameter
          string profileName = fSymb.Name;
          string profile;
-         ParameterUtil.GetStringValueFromElement(fSymb, fSymb.Id, "IfcProfileName[Type]", out profile);
+         ParameterUtil.GetStringValueFromElement(fSymb, "IfcProfileName[Type]", out profile);
          if (!string.IsNullOrEmpty(profile))
             profileName = profile;
 

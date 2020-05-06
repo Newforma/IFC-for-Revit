@@ -34,7 +34,7 @@ namespace Revit.IFC.Export.Exporter.PropertySet
    /// <summary>
    /// Provides static methods to create varies IFC classifications.
    /// </summary>
-   class ClassificationUtil
+   public class ClassificationUtil
    {
       /// <summary>
       /// Creates uniformat classification.
@@ -185,7 +185,7 @@ namespace Revit.IFC.Export.Exporter.PropertySet
          //          [<Classification name>] <classification code> : <classification description>
          // Note that the classification code can contain brackets and colons without specifying the classification name and description if the following syntax is used:
          //          []<classification code>:
-         
+
          classificationName = null;
          classificationCode = null;
          classificationDescription = null;

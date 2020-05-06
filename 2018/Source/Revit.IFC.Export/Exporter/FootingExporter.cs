@@ -80,10 +80,9 @@ namespace Revit.IFC.Export.Exporter
             return;
 
          // Check the intended IFC entity or type name is in the exclude list specified in the UI
-         Common.Enums.IFCEntityType elementClassTypeEnum;
-         if (Enum.TryParse<Common.Enums.IFCEntityType>("IfcFooting", out elementClassTypeEnum))
-            if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
-               return;
+         Common.Enums.IFCEntityType elementClassTypeEnum = Common.Enums.IFCEntityType.IfcFooting;
+         if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
+            return;
 
          IFCFile file = exporterIFC.GetFile();
 
@@ -114,9 +113,9 @@ namespace Revit.IFC.Export.Exporter
                   }
 
                   string instanceGUID = GUIDUtil.CreateGUID(element);
-                  
+
                   string footingType = GetIFCFootingType(ifcEnumType);    // need to keep it for legacy support when original data follows slightly diff naming
-                  footingType = IFCValidateEntry.GetValidIFCType(element, footingType);
+                  //footingType = IFCValidateEntry.GetValidIFCPredefinedType(element, footingType, "IfcFootingType");
 
                   IFCAnyHandle footing = IFCInstanceExporter.CreateFooting(exporterIFC, element, instanceGUID, ExporterCacheManager.OwnerHistoryHandle,
                       ecData.GetLocalPlacement(), prodRep, footingType);

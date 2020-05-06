@@ -53,10 +53,9 @@ namespace Revit.IFC.Export.Exporter
             return;
 
          // Check the intended IFC entity or type name is in the exclude list specified in the UI
-         Common.Enums.IFCEntityType elementClassTypeEnum;
-         if (Enum.TryParse<Common.Enums.IFCEntityType>("IfcAnnotation", out elementClassTypeEnum))
-            if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
-               return;
+         Common.Enums.IFCEntityType elementClassTypeEnum = Common.Enums.IFCEntityType.IfcAnnotation;
+         if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
+            return;
 
          IFCFile file = exporterIFC.GetFile();
          using (IFCTransaction tr = new IFCTransaction(file))
@@ -230,22 +229,22 @@ namespace Revit.IFC.Export.Exporter
 
          // The center-middle is an odd case; we can deal with it firs
 
-         if(   (HorizontalTextAlignment.Center == textNote.HorizontalAlignment)
-            && (VerticalTextAlignment.Middle == textNote.VerticalAlignment) )
+         if ((HorizontalTextAlignment.Center == textNote.HorizontalAlignment)
+            && (VerticalTextAlignment.Middle == textNote.VerticalAlignment))
          {
             return "center";
          }
 
          string boxAlignment = null;
 
-         switch(textNote.VerticalAlignment)
+         switch (textNote.VerticalAlignment)
          {
             case VerticalTextAlignment.Top:
                yFactor = 1.0;
                boxAlignment = "top-";
                break;
             case VerticalTextAlignment.Middle:
-                  boxAlignment = "middle-";
+               boxAlignment = "middle-";
                break;
             case VerticalTextAlignment.Bottom:
                yFactor = -1.0;
@@ -253,7 +252,7 @@ namespace Revit.IFC.Export.Exporter
                break;
          }
 
-         switch(textNote.HorizontalAlignment)
+         switch (textNote.HorizontalAlignment)
          {
             case HorizontalTextAlignment.Left:
                xFactor = -1.0;

@@ -49,10 +49,9 @@ namespace Revit.IFC.Export.Exporter
             return;
 
          // Check the intended IFC entity or type name is in the exclude list specified in the UI
-         Common.Enums.IFCEntityType elementClassTypeEnum;
-         if (Enum.TryParse<Common.Enums.IFCEntityType>("IfcZone", out elementClassTypeEnum))
-            if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
-               return;
+         Common.Enums.IFCEntityType elementClassTypeEnum = Common.Enums.IFCEntityType.IfcZone;
+         if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
+            return;
 
          HashSet<IFCAnyHandle> spaceHnds = new HashSet<IFCAnyHandle>();
 
@@ -78,7 +77,7 @@ namespace Revit.IFC.Export.Exporter
             IFCAnyHandle ownerHistory = ExporterCacheManager.OwnerHistoryHandle;
             string name = NamingUtil.GetNameOverride(element, NamingUtil.GetIFCName(element));
             string description = NamingUtil.GetDescriptionOverride(element, null);
-            string objectType = NamingUtil.GetObjectTypeOverride(element, exporterIFC.GetFamilyName());
+            string objectType = NamingUtil.GetObjectTypeOverride(element, NamingUtil.GetFamilyAndTypeName(element));
             string longName = NamingUtil.GetLongNameOverride(element, null);
 
             IFCAnyHandle zoneHnd = IFCInstanceExporter.CreateZone(file, guid, ownerHistory, name, description, objectType, longName);

@@ -286,7 +286,7 @@ namespace Revit.IFC.Export.Utility
          if (siteTransformation != null)
          {
             try
-            { 
+            {
                cache.SiteTransformation = (SiteTransformBasis)siteTransformation;
             }
             catch (Exception) { }
@@ -312,7 +312,7 @@ namespace Revit.IFC.Export.Utility
             int levelOfDetail = (int)(tessellationLOD.Value * 4.0 + 0.5);
             // Ensure LOD is between 1 to 4, inclusive.
             levelOfDetail = Math.Min(Math.Max(levelOfDetail, 1), 4);
-            cache.LevelOfDetail = (ExportTessellationLevel) levelOfDetail;
+            cache.LevelOfDetail = (ExportTessellationLevel)levelOfDetail;
          }
 
          bool? useOnlyTriangulation = GetNamedBooleanOption(options, "UseOnlyTriangulation");
@@ -574,7 +574,7 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
-      /// Identifies if the file version being exported is 2x2.
+      /// Identifies if the schema version being exported is IFC 2x2.
       /// </summary>
       public bool ExportAs2x2
       {
@@ -585,7 +585,7 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
-      /// Identifies if the file version being exported is 2x3 Coordination View 1.0.
+      /// Identifies if the schema version being exported is IFC 2x3 Coordination View 1.0.
       /// </summary>
       public bool ExportAs2x3CoordinationView1
       {
@@ -596,7 +596,7 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
-      /// Identifies if the file version being exported is 2x3 Coordination View 2.0.
+      /// Identifies if the schema version being exported is IFC 2x3 Coordination View 2.0.
       /// </summary>
       public bool ExportAs2x3CoordinationView2
       {
@@ -607,7 +607,7 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
-      /// Identifies if the file version being exported is 2x3 Extended FM Handover View (e.g., UK COBie).
+      /// Identifies if the schema version being exported is IFC 2x3 Extended FM Handover View (e.g., UK COBie).
       /// </summary>
       public bool ExportAs2x3ExtendedFMHandoverView
       {
@@ -618,8 +618,9 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
-      /// Identifies if the file version being exported is 2x3 or 4 Coordination View 2.0.
+      /// Identifies if the schema version and MVD being exported is IFC 2x3 Coordination View 2.0 or any IFC 4 MVD.
       /// </summary>
+      /// <remarks>IFC 4 Coordination View 2.0 is not a real MVD; this was a placeholder and is obsolete.</remarks>
       public bool ExportAsCoordinationView2
       {
          get
@@ -629,7 +630,18 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
-      /// Identifies if the file version being exported is 4.
+      /// Identifies if the IFC schema version is older than IFC 4.
+      /// </summary>
+      public bool ExportAsOlderThanIFC4
+      {
+         get
+         {
+            return ExportAs2x2 || ExportAs2x3;
+         }
+      }
+
+      /// <summary>
+      /// Identifies if the IFC schema version being exported is IFC 4.
       /// </summary>
       public bool ExportAs4
       {
@@ -656,6 +668,9 @@ namespace Revit.IFC.Export.Utility
 
       }
 
+      /// <summary>
+      /// Identifies if the schema used is IFC4 Addendum 2 in place of IFC4 for version 4.
+      /// </summary>
       public bool ExportAs4_ADD2
       {
          get
@@ -670,6 +685,9 @@ namespace Revit.IFC.Export.Utility
 
       }
 
+      /// <summary>
+      /// Identifies if the schema used is IFC 2x3.
+      /// </summary>
       public bool ExportAs2x3
       {
          get
@@ -679,7 +697,7 @@ namespace Revit.IFC.Export.Utility
       }
 
       /// <summary>
-      /// Identifies if the schema used is the GSA 2010 COBie specification.
+      /// Identifies if the schema and MVD used is the IFC 2x3 GSA 2010 COBie specification.
       /// </summary>
       public bool ExportAsCOBIE
       {
@@ -689,6 +707,9 @@ namespace Revit.IFC.Export.Utility
          }
       }
 
+      /// <summary>
+      /// Identifies if the schema and MVD used is the IFC 4 Reference View.
+      /// </summary>
       public bool ExportAs4ReferenceView
       {
          get
@@ -697,6 +718,9 @@ namespace Revit.IFC.Export.Utility
          }
       }
 
+      /// <summary>
+      /// Identifies if the schema and MVD used is the IFC 4 Design Transfer View.
+      /// </summary>
       public bool ExportAs4DesignTransferView
       {
          get
@@ -705,6 +729,9 @@ namespace Revit.IFC.Export.Utility
          }
       }
 
+      /// <summary>
+      /// Identifies if the schema and MVD used is the IFC 2x3 COBie 2.4 Design Deliverable.
+      /// </summary>
       public bool ExportAs2x3COBIE24DesignDeliverable
       {
          get
@@ -933,8 +960,8 @@ namespace Revit.IFC.Export.Utility
       /// </summary>
       //public bool ExportAllLevels
       //{
-      //   get;
-      //   set;
+         //get;
+         //set;
       //}
 
       /// <summary>

@@ -24,6 +24,7 @@ using Autodesk.Revit.DB.IFC;
 using Revit.IFC.Common.Utility;
 using Revit.IFC.Export.Utility;
 using Revit.IFC.Export.Toolkit;
+using Revit.IFC.Common.Enums;
 
 namespace Revit.IFC.Export.Exporter
 {
@@ -69,10 +70,9 @@ namespace Revit.IFC.Export.Exporter
             return;
 
          // Check the intended IFC entity or type name is in the exclude list specified in the UI
-         Common.Enums.IFCEntityType elementClassTypeEnum;
-         if (Enum.TryParse<Common.Enums.IFCEntityType>("IfcCovering", out elementClassTypeEnum))
-            if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
-               return;
+         Common.Enums.IFCEntityType elementClassTypeEnum = Common.Enums.IFCEntityType.IfcCovering;
+         if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(elementClassTypeEnum))
+            return;
 
          ElementType elemType = element.Document.GetElement(element.GetTypeId()) as ElementType;
          IFCFile file = exporterIFC.GetFile();
@@ -112,7 +112,7 @@ namespace Revit.IFC.Export.Exporter
                      defaultCoveringEnumType = "ROOFING";
 
                   string instanceGUID = GUIDUtil.CreateGUID(element);
-                  string coveringType = IFCValidateEntry.GetValidIFCType(element, ifcEnumType, defaultCoveringEnumType);
+                  string coveringType = IFCValidateEntry.GetValidIFCPredefinedTypeType(/*element,*/ ifcEnumType, defaultCoveringEnumType, "IfcCoveringType");
 
                   IFCAnyHandle covering = IFCInstanceExporter.CreateCovering(exporterIFC, element, instanceGUID, ExporterCacheManager.OwnerHistoryHandle,
                       setter.LocalPlacement, prodRep, coveringType);
@@ -121,6 +121,10 @@ namespace Revit.IFC.Export.Exporter
                   {
                      PartExporter.ExportHostPart(exporterIFC, element, covering, productWrapper, setter, setter.LocalPlacement, null);
                   }
+
+                  IFCExportInfoPair exportInfo = new IFCExportInfoPair(IFCEntityType.IfcCovering, IFCEntityType.IfcCoveringType, coveringType);
+                  IFCAnyHandle typeHnd = ExporterUtil.CreateGenericTypeFromElement(element, exportInfo, file, ExporterCacheManager.OwnerHistoryHandle, coveringType, productWrapper);
+                  ExporterCacheManager.TypeRelationsCache.Add(typeHnd, covering);
 
                   bool containInSpace = false;
                   IFCAnyHandle localPlacementToUse = setter.LocalPlacement;

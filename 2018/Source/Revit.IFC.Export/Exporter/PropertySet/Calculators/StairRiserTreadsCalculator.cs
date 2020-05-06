@@ -28,195 +28,298 @@ using Revit.IFC.Export.Utility;
 
 namespace Revit.IFC.Export.Exporter.PropertySet.Calculators
 {
-    /// <summary>
-    /// A calculation class to calculate riser and tread parameters.
-    /// </summary>
-    class StairRiserTreadsCalculator : PropertyCalculator
-    {
-        /// <summary>
-        /// An int variable to keep the calculated NumberOfRisers value.
-        /// </summary>
-        private int m_NumberOfRisers = 0;
+   /// <summary>
+   /// A calculation class to calculate riser and tread parameters.
+   /// </summary>
+   /// <remarks>This is intended as a base class for the various stairs calculators
+   /// that use its values.</remarks>
+   class StairRiserTreadsCalculator : PropertyCalculator
+   {
+      /// <summary>
+      /// A static instance of this class.
+      /// </summary>
+      static StairRiserTreadsCalculator s_Instance = new StairRiserTreadsCalculator();
 
-        /// <summary>
-        /// An int variable to keep the calculated NumberOfTreads value.
-        /// </summary>
-        private int m_NumberOfTreads = 0;
+      /// <summary>
+      /// The NumberOfTreadsCalculator instance.
+      /// </summary>
+      public static StairRiserTreadsCalculator Instance
+      {
+         get { return s_Instance; }
+      }
 
-        /// <summary>
-        /// An int variable to keep the calculated RiserHeight value.
-        /// </summary>
-        private double m_RiserHeight = 0.0;
+      /// <summary>
+      /// An int variable to keep the calculated NumberOfRisers value.
+      /// </summary>
+      public int NumberOfRisers { get; private set; } = 0;
 
-        /// <summary>
-        /// An int variable to keep the calculated TreadLength value.
-        /// </summary>
-        private double m_TreadLength = 0.0;
+      /// <summary>
+      /// An int variable to keep the calculated NumberOfTreads value.
+      /// </summary>
+      public int NumberOfTreads { get; private set; } = 0;
 
-        /// <summary>
-        /// An int variable to keep the calculated m_TreadLengthAtOffset value.
-        /// </summary>
-        private double m_TreadLengthAtOffset = 0.0;
+      /// <summary>
+      /// A double variable to keep the calculated RiserHeight value.
+      /// </summary>
+      public double RiserHeight { get; private set; } = 0.0;
 
-        /// <summary>
-        /// An int variable to keep the calculated TreadLength value.
-        /// </summary>
-        private double m_TreadLengthAtInnerSide = 0.0;
+      /// <summary>
+      /// A double variable to keep the calculated TreadLength value.
+      /// </summary>
+      public double TreadLength { get; private set; } = 0.0;
 
-        /// <summary>
-        /// An int variable to keep the calculated NosingLength value.
-        /// </summary>
-        private double m_NosingLength = 0.0;
+      /// <summary>
+      /// A double variable to keep the calculated TreadLengthAtOffset value.
+      /// </summary>
+      public double TreadLengthAtOffset { get; private set; } = 0.0;
 
-        /// <summary>
-        /// An int variable to keep the calculated WalkingLineOffset value.
-        /// </summary>
-        private double m_WalkingLineOffset = 0.0;
-        
-        /// <summary>
-        /// An int variable to keep the calculated WaistThickness value.
-        /// </summary>
-        private double m_WaistThickness = 0.0;
-        
-        /// <summary>
-        /// Determine if the multiple variables need to be calculated or not for the current element.
-        /// </summary>
-        private Element m_CurrentElement = null;
+      /// <summary>
+      /// A double variable to keep the calculated TreadLength value.
+      /// </summary>
+      public double TreadLengthAtInnerSide { get; private set; } = 0.0;
 
-        /// <summary>
-        /// A static instance of this class.
-        /// </summary>
-        static StairRiserTreadsCalculator s_Instance = new StairRiserTreadsCalculator();
+      /// <summary>
+      /// An int variable to keep the calculated NosingLength value.
+      /// </summary>
+      public double NosingLength { get; private set; } = 0.0;
 
-        /// <summary>
-        /// The StairNumberOfRisersCalculator instance.
-        /// </summary>
-        public static StairRiserTreadsCalculator Instance
-        {
-            get { return s_Instance; }
-        }
+      /// <summary>
+      /// An int variable to keep the calculated WalkingLineOffset value.
+      /// </summary>
+      public double WalkingLineOffset { get; private set; } = 0.0;
 
-        /// <summary>
-        /// Determines if the calculator calculates only one parameter, or multiple.
-        /// </summary>
-        /// <returns>
-        /// True for multiple parameters, false for one.
-        /// </returns>
-        public override bool CalculatesMultipleParameters
-        {
-            get { return true; }
-        }
+      /// <summary>
+      /// An int variable to keep the calculated WaistThickness value.
+      /// </summary>
+      public double WaistThickness { get; private set; } = 0.0;
 
-        /// <summary>
-        /// Calculates number of risers for a stair.
-        /// </summary>
-        /// <param name="exporterIFC">
-        /// The ExporterIFC object.
-        /// </param>
-        /// <param name="extrusionCreationData">
-        /// The IFCExtrusionCreationData.
-        /// </param>
-        /// <param name="element">
-        /// The element to calculate the value.
-        /// </param>
-        /// <param name="elementType">
-        /// The element type.
-        /// </param>
-        /// <returns>
-        /// True if the operation succeed, false otherwise.
-        /// </returns>
-        public override bool Calculate(ExporterIFC exporterIFC, IFCExtrusionCreationData extrusionCreationData, Element element, ElementType elementType)
-        {
-            bool valid = true;
-            if (m_CurrentElement != element)
+      /// <summary>
+      /// The current element whose values are being calculated, cached to reduce number of operations.
+      /// </summary>
+      private Element CurrentElement { get; set; } = null;
+
+      /// <summary>
+      /// Calculates number of risers for a stair.
+      /// </summary>
+      /// <param name="exporterIFC">The ExporterIFC object.</param>
+      /// <param name="extrusionCreationData">The IFCExtrusionCreationData.</param>
+      /// <param name="element">The element to calculate the value.</param>
+      /// <param name="elementType">The element type.</param>
+      /// <returns>True if the operation succeed, false otherwise.</returns>
+      public override bool Calculate(ExporterIFC exporterIFC, IFCExtrusionCreationData extrusionCreationData, Element element, ElementType elementType)
+      {
+         bool valid = true;
+         if (CurrentElement != element)
+         {
+            CurrentElement = element;
+            if (StairsExporter.IsLegacyStairs(element))
             {
-                m_CurrentElement = element;
-                if (StairsExporter.IsLegacyStairs(element))
-                {
-                    ExporterIFCUtils.GetLegacyStairsProperties(exporterIFC, element, 
-                        out m_NumberOfRisers, out m_NumberOfTreads,
-                        out m_RiserHeight, out m_TreadLength, out m_TreadLengthAtInnerSide,
-                        out m_NosingLength, out m_WaistThickness);
-                    m_TreadLengthAtOffset = m_TreadLength;
-                    m_WalkingLineOffset = m_WaistThickness / 2.0;
-                }
-                else if (element is Stairs)
-                {
-                    Stairs stairs = element as Stairs;
-                    m_NumberOfRisers = stairs.ActualRisersNumber;
-                    m_NumberOfTreads = stairs.ActualTreadsNumber;
-                    m_RiserHeight = UnitUtil.ScaleLength(stairs.ActualRiserHeight);
-                    m_TreadLength = UnitUtil.ScaleLength(stairs.ActualTreadDepth);
-                }
-                else if (element is StairsRun)
-                {
-                    StairsRun stairsRun = element as StairsRun;
-                    StairsRunType stairsRunType = stairsRun.Document.GetElement(stairsRun.GetTypeId()) as StairsRunType;
-                    Stairs stairs = stairsRun.GetStairs();
-                    StairsType stairsType = stairs.Document.GetElement(stairs.GetTypeId()) as StairsType;
+               int numberOfRisers, numberOfTreads;
+               double riserHeight, treadLength, treadLengthAtInnerSide, nosingLength, waistThickness;
 
-                    m_NumberOfRisers = stairs.ActualRisersNumber;
-                    m_NumberOfTreads = stairs.ActualTreadsNumber;
-                    m_RiserHeight = UnitUtil.ScaleLength(stairs.ActualRiserHeight);
-                    m_TreadLength = UnitUtil.ScaleLength(stairs.ActualTreadDepth);
-                    m_TreadLengthAtOffset = m_TreadLength;
-                    m_NosingLength = UnitUtil.ScaleLength(stairsRunType.NosingLength);
-                    m_WaistThickness = UnitUtil.ScaleLength(stairsRun.ActualRunWidth);
-                    m_WalkingLineOffset = m_WaistThickness / 2.0;
+               ExporterIFCUtils.GetLegacyStairsProperties(exporterIFC, element,
+                   out numberOfRisers, out numberOfTreads,
+                   out riserHeight, out treadLength, out treadLengthAtInnerSide,
+                   out nosingLength, out waistThickness);
 
-                    double treadLengthAtInnerSide;
-                    if (ParameterUtil.GetDoubleValueFromElement(stairsType, 
-                        BuiltInParameter.STAIRSTYPE_MINIMUM_TREAD_WIDTH_INSIDE_BOUNDARY, out treadLengthAtInnerSide) != null)
-                        m_TreadLengthAtInnerSide = UnitUtil.ScaleLength(treadLengthAtInnerSide);
-                    else
-                        m_TreadLengthAtInnerSide = 0.0;
-                }
-                else
-                {
-                    valid = false;
-                }
+               NumberOfRisers = numberOfRisers;
+               NumberOfTreads = numberOfTreads;
+               RiserHeight = riserHeight;
+               TreadLength = treadLength;
+               TreadLengthAtInnerSide = treadLengthAtInnerSide;
+               NosingLength = nosingLength;
+               WaistThickness = waistThickness;
+
+               TreadLengthAtOffset = TreadLength;
+               WalkingLineOffset = WaistThickness / 2.0;
             }
-            return valid;
-        }
+            else if (element is Stairs)
+            {
+               Stairs stairs = element as Stairs;
+               NumberOfRisers = stairs.ActualRisersNumber;
+               NumberOfTreads = stairs.ActualTreadsNumber;
+               RiserHeight = UnitUtil.ScaleLength(stairs.ActualRiserHeight);
+               TreadLength = UnitUtil.ScaleLength(stairs.ActualTreadDepth);
+            }
+            else if (element is StairsRun)
+            {
+               StairsRun stairsRun = element as StairsRun;
+               StairsRunType stairsRunType = stairsRun.Document.GetElement(stairsRun.GetTypeId()) as StairsRunType;
+               Stairs stairs = stairsRun.GetStairs();
+               StairsType stairsType = stairs.Document.GetElement(stairs.GetTypeId()) as StairsType;
 
-        /// <summary>
-        /// Gets the calculated int value.
-        /// </summary>
-        /// <returns>
-        /// The int value.
-        /// </returns>
-        public override int GetIntValue(string paramName)
-        {
-            if (String.Compare(paramName, "NumberOfRiser", true) == 0)
-                return m_NumberOfRisers;
-            if (String.Compare(paramName, "NumberOfTreads", true) == 0)
-                return m_NumberOfTreads;
-            return 0;
-        }
-        
-        /// <summary>
-        /// Gets the calculated double value.
-        /// </summary>
-        /// <returns>
-        /// The double value.
-        /// </returns>
-        public override double GetDoubleValue(string paramName)
-        {
-            if (String.Compare(paramName, "NosingLength", true) == 0)
-                return m_NosingLength;
-            if (String.Compare(paramName, "RiserHeight", true) == 0)
-                return m_RiserHeight;
-            if (String.Compare(paramName, "TreadLength", true) == 0)
-                return m_TreadLength;
-            if (String.Compare(paramName, "TreadLengthAtInnerSide", true) == 0)
-                return m_TreadLengthAtInnerSide;
-            if (String.Compare(paramName, "TreadLengthAtOffset", true) == 0)
-                return m_TreadLengthAtOffset;
-            if (String.Compare(paramName, "WalkingLineOffset", true) == 0)
-                return m_WalkingLineOffset;
-            if (String.Compare(paramName, "WaistThickness", true) == 0)
-                return m_WaistThickness;
-            return 0.0;
-        }
-    }
+               NumberOfRisers = stairs.ActualRisersNumber;
+               NumberOfTreads = stairs.ActualTreadsNumber;
+               RiserHeight = UnitUtil.ScaleLength(stairs.ActualRiserHeight);
+               TreadLength = UnitUtil.ScaleLength(stairs.ActualTreadDepth);
+               TreadLengthAtOffset = TreadLength;
+               NosingLength = UnitUtil.ScaleLength(stairsRunType.NosingLength);
+               WaistThickness = UnitUtil.ScaleLength(stairsRun.ActualRunWidth);
+               WalkingLineOffset = WaistThickness / 2.0;
+
+               double treadLengthAtInnerSide;
+               if (ParameterUtil.GetDoubleValueFromElement(stairsType,
+                   BuiltInParameter.STAIRSTYPE_MINIMUM_TREAD_WIDTH_INSIDE_BOUNDARY, out treadLengthAtInnerSide) != null)
+                  TreadLengthAtInnerSide = UnitUtil.ScaleLength(treadLengthAtInnerSide);
+               else
+                  TreadLengthAtInnerSide = 0.0;
+            }
+            else
+            {
+               valid = false;
+            }
+         }
+         return valid;
+      }
+   }
+
+   /// <summary>
+   /// A calculation class to calculate riser and tread parameters.
+   /// </summary>
+   /// <remarks>This allows us to share the calculated values in StairRiserTreadsCalculator without
+   /// doing unnecessary API calls.</remarks>
+   class StairRiserTreadsDerivedCalculator : PropertyCalculator
+   {
+      protected StairRiserTreadsCalculator m_StairRiserTreadsCalculator = StairRiserTreadsCalculator.Instance;
+
+      public override bool Calculate(ExporterIFC exporterIFC, IFCExtrusionCreationData extrusionCreationData, Element element, ElementType elementType)
+      {
+         return m_StairRiserTreadsCalculator.Calculate(exporterIFC, extrusionCreationData, element, elementType);
+      }
+   }
+
+   /// <summary>
+   /// A calculation class to calculate number of risers.
+   /// </summary>
+   class NumberOfRiserCalculator : StairRiserTreadsDerivedCalculator
+   {
+      /// <summary>
+      /// Gets the calculated int value.
+      /// </summary>
+      /// <returns>The int value.</returns>
+      public override int GetIntValue()
+      {
+         return m_StairRiserTreadsCalculator.NumberOfRisers;
+      }
+   }
+
+   /// <summary>
+   /// A calculation class to calculate number of treads.
+   /// </summary>
+   class NumberOfTreadsCalculator : StairRiserTreadsDerivedCalculator
+   {
+      /// <summary>
+      /// Gets the calculated int value.
+      /// </summary>
+      /// <returns>The int value.</returns>
+      public override int GetIntValue()
+      {
+         return m_StairRiserTreadsCalculator.NumberOfTreads;
+      }
+   }
+
+   /// <summary>
+   /// A calculation class to calculate nosing length.
+   /// </summary>
+   class NosingLengthCalculator : StairRiserTreadsDerivedCalculator
+   {
+      /// <summary>
+      /// Gets the calculated double value.
+      /// </summary>
+      /// <returns>The double value.</returns>
+      public override double GetDoubleValue()
+      {
+         return m_StairRiserTreadsCalculator.NosingLength;
+      }
+   }
+
+   /// <summary>
+   /// A calculation class to calculate riser height.
+   /// </summary>
+   class RiserHeightCalculator : StairRiserTreadsDerivedCalculator
+   {
+      /// <summary>
+      /// Gets the calculated double value.
+      /// </summary>
+      /// <returns>The double value.</returns>
+      public override double GetDoubleValue()
+      {
+         return m_StairRiserTreadsCalculator.RiserHeight;
+      }
+   }
+
+   /// <summary>
+   /// A calculation class to calculate tread length.
+   /// </summary>
+   class TreadLengthCalculator : StairRiserTreadsDerivedCalculator
+   {
+      /// <summary>
+      /// Gets the calculated double value.
+      /// </summary>
+      /// <returns>The double value.</returns>
+      public override double GetDoubleValue()
+      {
+         return m_StairRiserTreadsCalculator.TreadLength;
+      }
+   }
+
+   /// <summary>
+   /// A calculation class to calculate tread length at inner side.
+   /// </summary>
+   class TreadLengthAtInnerSideCalculator : StairRiserTreadsDerivedCalculator
+   {
+      /// <summary>
+      /// Gets the calculated double value.
+      /// </summary>
+      /// <returns>The double value.</returns>
+      public override double GetDoubleValue()
+      {
+         return m_StairRiserTreadsCalculator.TreadLengthAtInnerSide;
+      }
+   }
+
+   /// <summary>
+   /// A calculation class to calculate tread length at offset.
+   /// </summary>
+   class TreadLengthAtOffsetCalculator : StairRiserTreadsDerivedCalculator
+   {
+      /// <summary>
+      /// Gets the calculated double value.
+      /// </summary>
+      /// <returns>The double value.</returns>
+      public override double GetDoubleValue()
+      {
+         return m_StairRiserTreadsCalculator.TreadLengthAtOffset;
+      }
+   }
+
+   /// <summary>
+   /// A calculation class to calculate walking line offset.
+   /// </summary>
+   class WalkingLineOffsetCalculator : StairRiserTreadsDerivedCalculator
+   {
+      /// <summary>
+      /// Gets the calculated double value.
+      /// </summary>
+      /// <returns>The double value.</returns>
+      public override double GetDoubleValue()
+      {
+         return m_StairRiserTreadsCalculator.WalkingLineOffset;
+      }
+   }
+
+   /// <summary>
+   /// A calculation class to calculate waist thickness.
+   /// </summary>
+   class WaistThicknessCalculator : StairRiserTreadsDerivedCalculator
+   {
+      /// <summary>
+      /// Gets the calculated double value.
+      /// </summary>
+      /// <returns>The double value.</returns>
+      public override double GetDoubleValue()
+      {
+         return m_StairRiserTreadsCalculator.WaistThickness;
+      }
+   }
 }
