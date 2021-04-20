@@ -54,12 +54,6 @@
     <DefineConstants>TRACE;IFC_OPENSOURCE;</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="RevitAPI">
-      <HintPath>C:\Program Files\Autodesk\Revit 2022\RevitAPI.dll</HintPath>
-    </Reference>
-    <Reference Include="RevitAPIIFC">
-      <HintPath>C:\Program Files\Autodesk\Revit 2022\RevitAPIIFC.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Web.Extensions" />
     <Reference Include="System.XML" />
@@ -384,10 +378,6 @@
     about missing OutputPath tags.
     -->
   <Import Project=".\Revit.IFC.Export.props" />
-  <PropertyGroup>
-    <PostBuildEvent>xcopy "$(TargetPath)" "C:\ProgramData\Autodesk\ApplicationPlugins\IFC 2022.bundle\Contents\2022\" /F /R /Y /I 
-xcopy "$(TargetDir)GeometryGymIFC.dll" "C:\ProgramData\Autodesk\ApplicationPlugins\IFC 2022.bundle\Contents\2022\" /F /R /Y /I</PostBuildEvent>
-  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
