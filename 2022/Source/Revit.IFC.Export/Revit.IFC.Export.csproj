@@ -350,12 +350,33 @@
     <PackageReference Include="Antlr4.Runtime">
       <Version>4.6.6</Version>
     </PackageReference>
+    <PackageReference Include="BIMOne.Autodesk.Revit2022.RevitAPI">
+      <Version>22.0.2.392</Version>
+    </PackageReference>
+    <PackageReference Include="BIMOne.Autodesk.Revit2022.RevitAPIIFC">
+      <Version>22.0.2.392</Version>
+    </PackageReference>
     <PackageReference Include="GeometryGymIFC">
       <Version>0.0.20</Version>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json">
       <Version>10.0.3</Version>
     </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="BIMOne.Revit2022.IFC.Export.nuspec" />
+    <Content Include="IFC2X2_ADD1.exp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="IFC2X3_TC1.exp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="IFC4.exp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="IFCCertifiedEntitiesAndPSets.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <!--
     Always Import the appropriate *.OutputPath.targets file BEFORE the
