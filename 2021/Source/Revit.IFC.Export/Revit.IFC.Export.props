@@ -23,17 +23,17 @@
   <ItemGroup>
     <Reference Include="RevitAPI">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\BIMOne.Autodesk.Revit2021.RevitAPI.21.1.30.74\lib\net47\RevitAPI.dll</HintPath>
+      <HintPath>..\..\packages\bimone.autodesk.revit2021.revitapi\21.1.30.74\lib\net47\RevitAPI.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="RevitAPIIFC">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\BIMOne.Autodesk.Revit2020.RevitAPIIFC.21.1.30.74\lib\net47\RevitAPIIFC.dll</HintPath>
+      <HintPath>..\..\packages\bimone.autodesk.revit2021.revitapiifc\21.1.30.74\lib\net47\RevitAPIIFC.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=4.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+    <Reference Include="Newtonsoft.Json, Version=13.0.1, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\packages\Newtonsoft.Json.4.5.1\lib\net40\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\..\packages\newtonsoft.json\13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>

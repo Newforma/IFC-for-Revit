@@ -113,17 +113,21 @@
       <Version>21.1.30.74</Version>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json">
-      <Version>10.0.3</Version>
+      <Version>13.0.1</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Revit.IFC.Common.props" />
+    <Content Include="BIMOne.Revit2021.IFC.Common.nuspec" />
+    <Content Include="IFC2X2_ADD1.xsd">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="IFC2X3_TC1.xsd">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="IFC4.xsd">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
-  <!--
-    Always Import the appropriate *.OutputPath.targets file BEFORE the
-    Revit.CSharp.targets file, otherwise VisualStudio will complain
-    about missing OutputPath tags.
-    -->
   <Import Project=".\Revit.IFC.Common.props" />
   <PropertyGroup>
     <PostBuildEvent>
