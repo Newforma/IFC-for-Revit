@@ -12,7 +12,7 @@
     </dependencies>
   </metadata>
   <files>
-    <file src="bin\Release\*.dll" target="lib\net47" />
-    <file src="bin\Release\*.xsd" target="lib\net47" />
+    <file src="bin\Release\*.dll" target="lib\net48" />
+    <file src="bin\Release\*.xsd" target="lib\net48" />
   </files>
 </package>
