@@ -370,6 +370,7 @@
     <Content Include="IFCCertifiedEntitiesAndPSets.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="README.md" />
   </ItemGroup>
   <!--
     Always Import the appropriate *.OutputPath.targets file BEFORE the
