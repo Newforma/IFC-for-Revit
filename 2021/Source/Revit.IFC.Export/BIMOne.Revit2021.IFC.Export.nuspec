@@ -8,12 +8,14 @@
     <dependencies>
       <dependency id="BIMOne.Autodesk.Revit2021.RevitAPI" version="21.1.30.74" />
       <dependency id="BIMOne.Autodesk.Revit2021.RevitAPIIFC" version="21.1.30.74" />
+      <dependency id="BIMOne.Autodesk.Revit2021.SteelConnections.ASIFC" version="21.1.30.74" />
       <dependency id="Newtonsoft.Json" version="13.0.1" />
     </dependencies>
   </metadata>
   <files>
     <file src="bin\Release\*.dll" target="lib\net48" />
     <file src="bin\Release\*.exp" target="lib\net48" />
+    <file src="bin\Release\*.txt" target="lib\net48" />
     <file src="bin\Release\*.json" target="lib\net48" />
   </files>
 </package>

@@ -108,12 +108,15 @@
   <ItemGroup>
     <PackageReference Include="BIMOne.Autodesk.Revit2021.RevitAPI">
       <Version>21.1.30.74</Version>
+      <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
     <PackageReference Include="BIMOne.Autodesk.Revit2021.RevitAPIIFC">
       <Version>21.1.30.74</Version>
+      <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json">
       <Version>13.0.1</Version>
+      <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>

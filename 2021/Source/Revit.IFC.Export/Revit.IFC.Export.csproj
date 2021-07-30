@@ -95,6 +95,7 @@
     <Compile Include="Exporter\PropertySet\AttributeSetDescription.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\FireRatingCalculator.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\IsExternalCalculator.cs" />
+    <Compile Include="Exporter\PropertySet\Calculators\ISOCD3766ShapeParameterRCalculator.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\NosingLengthCalculator.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\NumberOfRiserCalculator.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\NumberOfTreadsCalculator.cs" />
@@ -224,6 +225,7 @@
     <Compile Include="Utility\DoublePropertyInfoCache.cs" />
     <Compile Include="Utility\DummyHostCache.cs" />
     <Compile Include="Utility\ElementFilteringUtil.cs" />
+    <Compile Include="Utility\ElementOrConnector.cs" />
     <Compile Include="Utility\ElementToHandleCache.cs" />
     <Compile Include="Utility\ElementTypeToHandleCache.cs" />
     <Compile Include="Utility\ExporterCacheManager.cs" />
@@ -345,20 +347,35 @@
     </PackageReference>
     <PackageReference Include="BIMOne.Autodesk.Revit2021.RevitAPI">
       <Version>21.1.30.74</Version>
+      <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
     <PackageReference Include="BIMOne.Autodesk.Revit2021.RevitAPIIFC">
       <Version>21.1.30.74</Version>
+      <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
     <PackageReference Include="GeometryGymIFC">
       <Version>0.0.20</Version>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json">
       <Version>13.0.1</Version>
+      <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <Content Include="BIMOne.Revit2021.IFC.Export.nuspec" />
+    <Content Include="DefaultUserDefinedParameterSets.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="IFC Shared Parameters-RevitIFCBuiltIn-Type_ALL.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="IFC Shared Parameters-RevitIFCBuiltIn_ALL.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="IFC2X2_ADD1.exp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="IFC2x3 COBie 2.4 Design Deliverable.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="IFC2X3_TC1.exp">
