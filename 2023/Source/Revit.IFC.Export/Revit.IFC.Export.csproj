@@ -41,18 +41,23 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <Prefer32Bit>false</Prefer32Bit>
     <DefineConstants>TRACE;DEBUG;IFC_OPENSOURCE</DefineConstants>
-    <PlatformTarget>x86</PlatformTarget>
-    <OutputPath>bin\Debugx64\</OutputPath>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <OutputPath>bin\Debug\</OutputPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
     <Prefer32Bit>false</Prefer32Bit>
     <DefineConstants>TRACE;IFC_OPENSOURCE</DefineConstants>
-    <OutputPath>bin\Releasex64\</OutputPath>
-    <PlatformTarget>x64</PlatformTarget>
+    <OutputPath>bin\Release\</OutputPath>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DefineConstants>TRACE;DEBUG;IFC_OPENSOURCE</DefineConstants>
     <OutputPath>bin\Debug\</OutputPath>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>full</DebugType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
+    <DefineConstants>TRACE;IFC_OPENSOURCE;</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -367,6 +372,13 @@
     <PackageReference Include="Newtonsoft.Json">
       <Version>10.0.3</Version>
     </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="BIMOne.Revit2023.IFC.Export.nuspec" />
+    <Content Include="IFC2X2_ADD1.exp" />
+    <Content Include="IFC2X3_TC1.exp" />
+    <Content Include="IFC4.exp" />
+    <Content Include="IFCCertifiedEntitiesAndPSets.json" />
   </ItemGroup>
   <!--
     Always Import the appropriate *.OutputPath.targets file BEFORE the

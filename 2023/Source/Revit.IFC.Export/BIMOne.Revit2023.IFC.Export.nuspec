@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata>
-        <id>BIMOne.Revit2022.IFC.Export</id>
-        <version>22.1.0.0</version>
+        <id>BIMOne.Revit2023.IFC.Export</id>
+        <version>23.1.0.0</version>
         <authors>BIM One Inc.</authors>
         <description>IFC Exporter for Revit.</description>
     <dependencies>
-      <dependency id="BIMOne.Autodesk.Revit2022.RevitAPI" version="22.0.2.392" />
-      <dependency id="BIMOne.Autodesk.Revit2022.RevitAPIIFC" version="22.0.2.392" />
+      <dependency id="BIMOne.Autodesk.Revit2023.RevitAPI" version="23.0.1.318" />
+      <dependency id="BIMOne.Autodesk.Revit2023.RevitAPIIFC" version="23.0.1.318" />
       <dependency id="Newtonsoft.Json" version="4.5.1" />
     </dependencies>
   </metadata>
