@@ -41,23 +41,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <Prefer32Bit>false</Prefer32Bit>
     <DefineConstants>TRACE;DEBUG;IFC_OPENSOURCE</DefineConstants>
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <OutputPath>bin\Debug\</OutputPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
     <Prefer32Bit>false</Prefer32Bit>
     <DefineConstants>TRACE;IFC_OPENSOURCE</DefineConstants>
+    <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DefineConstants>TRACE;DEBUG;IFC_OPENSOURCE</DefineConstants>
-    <OutputPath>bin\Debug\</OutputPath>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugType>full</DebugType>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
-    <DefineConstants>TRACE;IFC_OPENSOURCE;</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -386,10 +376,6 @@
     about missing OutputPath tags.
     -->
   <Import Project=".\Revit.IFC.Export.props" />
-  <PropertyGroup>
-    <PostBuildEvent>xcopy "$(TargetPath)" "C:\ProgramData\Autodesk\ApplicationPlugins\IFC 2023.bundle\Contents\2023\" /F /R /Y /I 
-xcopy "$(TargetDir)GeometryGymIFC.dll" "C:\ProgramData\Autodesk\ApplicationPlugins\IFC 2023.bundle\Contents\2023\" /F /R /Y /I</PostBuildEvent>
-  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
