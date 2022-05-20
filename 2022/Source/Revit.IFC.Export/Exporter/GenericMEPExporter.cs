@@ -92,7 +92,7 @@ namespace Revit.IFC.Export.Exporter
                            return false;
                         }
 
-                        ExportAsMappedItem(exporterIFC, element, file, exportType, ifcEnumType, extraParams,
+                        ExportAsMappedItem(exporterIFC, element, exportType, ifcEnumType, extraParams,
                                            setter, localPlacementToUse, productRepresentation,
                                            productWrapper);
                      }
@@ -166,7 +166,7 @@ namespace Revit.IFC.Export.Exporter
                               return false;
                            }
 
-                           ExportAsMappedItem(exporterIFC, element, file, exportType, ifcEnumType,
+                           ExportAsMappedItem(exporterIFC, element, exportType, ifcEnumType,
                                               extraParams, setter, localPlacementToUse,
                                               productRepresentation, productWrapper);
                         }
@@ -180,7 +180,7 @@ namespace Revit.IFC.Export.Exporter
          return true;
       }
 
-      private static void ExportAsMappedItem(ExporterIFC exporterIFC, Element element, IFCFile file, IFCExportInfoPair exportType, string ifcEnumType, IFCExtrusionCreationData extraParams,
+      private static void ExportAsMappedItem(ExporterIFC exporterIFC, Element element, IFCExportInfoPair exportType, string ifcEnumType, IFCExtrusionCreationData extraParams,
           PlacementSetter setter, IFCAnyHandle localPlacementToUse, IFCAnyHandle productRepresentation, ProductWrapper productWrapper)
       {
          IFCAnyHandle ownerHistory = ExporterCacheManager.OwnerHistoryHandle;
@@ -205,15 +205,14 @@ namespace Revit.IFC.Export.Exporter
                styleHandle = FamilyExporterUtil.ExportGenericType(exporterIFC, exportType, ifcEnumType, propertySetsOpt, repMapListOpt, element, type);
                if (!IFCAnyHandleUtil.IsNullOrHasNoValue(styleHandle))
                {
-                  propertySetsOpt = ExporterUtil.ExtractElementTypeProperties(exporterIFC, type, styleHandle);
-                  productWrapper.RegisterHandleWithElementType(type, exportType, styleHandle, propertySetsOpt);
+                  productWrapper.RegisterHandleWithElementType(type, exportType, styleHandle, null);
                   currentTypeInfo.Style = styleHandle;
                   ExporterCacheManager.FamilySymbolToTypeInfoCache.Register(typeId, false, exportType, currentTypeInfo);
 
                   Element elementType = element.Document.GetElement(element.GetTypeId());
-                  matId = BodyExporter.GetBestMaterialIdFromGeometryOrParameter(element.get_Geometry(geomOptions), exporterIFC, elementType);
+                  matId = BodyExporter.GetBestMaterialIdFromGeometryOrParameter(element.get_Geometry(geomOptions), elementType);
                   if (matId == ElementId.InvalidElementId)
-                     matId = BodyExporter.GetBestMaterialIdFromGeometryOrParameter(element.get_Geometry(geomOptions), exporterIFC, element);
+                     matId = BodyExporter.GetBestMaterialIdFromGeometryOrParameter(element.get_Geometry(geomOptions), element);
 
                   if (matId != ElementId.InvalidElementId)
                   {
@@ -261,7 +260,7 @@ namespace Revit.IFC.Export.Exporter
             return;
          if (matId == ElementId.InvalidElementId && !hasMaterialAssociatedToType)
          {
-            matId = BodyExporter.GetBestMaterialIdFromGeometryOrParameter(element.get_Geometry(geomOptions), exporterIFC, element);
+            matId = BodyExporter.GetBestMaterialIdFromGeometryOrParameter(element.get_Geometry(geomOptions), element);
             if (matId != ElementId.InvalidElementId)
                CategoryUtil.CreateMaterialAssociation(exporterIFC, instanceHandle, matId);
          }
@@ -281,8 +280,6 @@ namespace Revit.IFC.Export.Exporter
 
          if (!IFCAnyHandleUtil.IsNullOrHasNoValue(styleHandle))
             ExporterCacheManager.TypeRelationsCache.Add(styleHandle, instanceHandle);
-
-         PropertyUtil.CreateInternalRevitPropertySets(exporterIFC, element, productWrapper.GetAllObjects());
 
          ExporterCacheManager.MEPCache.Register(element, instanceHandle);
 

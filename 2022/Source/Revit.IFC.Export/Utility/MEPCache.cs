@@ -54,6 +54,16 @@ namespace Revit.IFC.Export.Utility
       public HashSet<ElementId> CoveredElementsCache = new HashSet<ElementId>();
 
       /// <summary>
+      /// The dictionary mapping from an exported connector to an Ifc handle. 
+      /// </summary>
+      public Dictionary<Connector, IFCAnyHandle> ConnectorCache = new Dictionary<Connector, IFCAnyHandle>();
+
+      /// <summary>
+      /// The dictionary mapping from an exported connector to its description string. 
+      /// </summary>
+      public Dictionary<Connector, string> ConnectorDescriptionCache = new Dictionary<Connector, string>();
+
+      /// <summary>
       /// Finds the Ifc handle from the dictionary.
       /// </summary>
       /// <param name="elementId">
@@ -140,6 +150,14 @@ namespace Revit.IFC.Export.Utility
          }
 
          return connectors;
+      }
+
+      public void CacheConnectorHandle(Connector connector, IFCAnyHandle handle)
+      {
+         if (!ConnectorCache.ContainsKey(connector) && handle != null)
+         {
+            ConnectorCache.Add(connector, handle);
+         }
       }
    }
 }

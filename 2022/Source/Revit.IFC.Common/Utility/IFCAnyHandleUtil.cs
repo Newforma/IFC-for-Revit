@@ -136,6 +136,97 @@ namespace Revit.IFC.Common.Utility
    }
    public class IFCAnyHandleUtil
    {
+      public class IfcPointList
+      {
+         public enum PointDimension
+         {
+            NotSet,
+            D2,
+            D3
+         };
+         public PointDimension Dimensionality { get; protected set; } = PointDimension.NotSet;
+         public List<PointBase> Points { get; protected set; } = new List<PointBase>();
+         public int Count { get { return Points.Count; } }
+         public PointBase Last() { return Points.Last(); }
+         public PointBase this[int key]
+         {
+            get => Points[key];
+            set => Points[key] = value;
+         }
+         /// <summary>
+         /// Sets dimension of points stored in container if it has never been set before.
+         /// Once set this function checks input dimension for compatibility with current dimension.
+         /// Throws exception if dimensions are not compatible.
+         /// </summary>
+         /// <param name="dim">Input dimension to be set or compared with.</param>
+         private void SetOrCheckPointDim(PointDimension dim)
+         {
+            if (Dimensionality != dim)
+            {
+               if (Dimensionality != PointDimension.NotSet)
+                  throw new ArgumentException("Input point dimension is not equal to container's point dimension");
+
+               Dimensionality = dim;
+            }
+         }
+
+         public void AddPoints(UV beg, UV end)
+         {
+            SetOrCheckPointDim(PointDimension.D2);
+
+            Points.Add(new Point2D(beg));
+            Points.Add(new Point2D(end));
+         }
+         public void AddPoints(XYZ beg, XYZ end)
+         {
+            SetOrCheckPointDim(PointDimension.D3);
+
+            Points.Add(new Point3D(beg));
+            Points.Add(new Point3D(end));
+         }
+         public void AddPoints(IList<XYZ> points)
+         {
+            SetOrCheckPointDim(PointDimension.D3);
+
+            foreach (var point in points)
+               Points.Add(new Point3D(point));
+         }
+         public void AddPoints(IList<UV> points)
+         {
+            SetOrCheckPointDim(PointDimension.D2);
+
+            foreach (var point in points)
+               Points.Add(new Point2D(point));
+         }
+         public void AddPoints(UV start, UV mid, UV end)
+         {
+            SetOrCheckPointDim(PointDimension.D2);
+
+            Points.Add(new Point2D(start));
+            Points.Add(new Point2D(mid));
+            Points.Add(new Point2D(end));
+         }
+         public void AddPoints(XYZ start, XYZ mid, XYZ end)
+         {
+            SetOrCheckPointDim(PointDimension.D3);
+
+            Points.Add(new Point3D(start));
+            Points.Add(new Point3D(mid));
+            Points.Add(new Point3D(end));
+         }
+         public void AddPointList(IfcPointList list)
+         {
+            SetOrCheckPointDim(list.Dimensionality);
+
+            Points.AddRange(list.Points);
+         }
+         public void InsertPointList(int index, IfcPointList list)
+         {
+            SetOrCheckPointDim(list.Dimensionality);
+
+            Points.InsertRange(index, list.Points);
+         }
+      }
       static Dictionary<IFCEntityType, string> m_sIFCEntityTypeToNames = new Dictionary<IFCEntityType, string>();
 
       static Dictionary<string, IFCEntityType> m_sIFCEntityNameToTypes = new Dictionary<string, IFCEntityType>();
@@ -165,12 +256,20 @@ namespace Revit.IFC.Common.Utility
       public static string GetIFCEntityTypeName(IFCEntityType entityType)
       {
          string entityTypeName;
-         if (!m_sIFCEntityTypeToNames.TryGetValue(entityType, out entityTypeName))
+         try
          {
-            entityTypeName = entityType.ToString();
-            m_sIFCEntityTypeToNames[entityType] = entityTypeName;
+            if (!m_sIFCEntityTypeToNames.TryGetValue(entityType, out entityTypeName))
+            {
+               entityTypeName = entityType.ToString();
+               m_sIFCEntityTypeToNames[entityType] = entityTypeName;
+            }
+            return entityTypeName;
          }
-         return entityTypeName;
+
+         catch
+         {
+            return null;
+         }
       }
 
       /// <summary>
@@ -347,6 +446,7 @@ namespace Revit.IFC.Common.Utility
          // This allows you to set empty strings, which may not always be intended, but should be allowed.
          if (value != null)
          {
+            value = new string(value.Where(c => !char.IsControl(c)).ToArray());
             int maxStrLen = IFCLimits.CalculateMaxAllowedSize(value);
             if (value.Length > maxStrLen)
             {
@@ -660,6 +760,59 @@ namespace Revit.IFC.Common.Utility
       }
 
       /// <summary>
+      /// Sets List of List of double value attribute for the handle
+      /// </summary>
+      /// <param name="handle">the handle</param>
+      /// <param name="name">The attribute name</param>
+      /// <param name="pointList">The points</param>
+      public static void SetAttribute(IFCAnyHandle handle, string name, IFCAnyHandleUtil.IfcPointList pointList,
+          int? outerListMin, int? outerListMax)
+      {
+         if (String.IsNullOrEmpty(name))
+            throw new ArgumentException("The name is empty.", "name");
+
+         if (pointList != null)
+         {
+            if (outerListMax != null)
+               if (pointList.Count > outerListMax)
+                  throw new ArgumentException("The outer List is larger than max. bound");
+            if (outerListMin != null)
+               if (pointList.Count < outerListMin)
+                  throw new ArgumentException("The outer List is less than min. bound");
+
+            IFCAggregate outerList = handle.CreateAggregateAttribute(name);
+
+            if (pointList.Dimensionality == IfcPointList.PointDimension.D3)
+            {
+               foreach (PointBase point in pointList.Points)
+               {
+                  Point3D point3D = point as Point3D;
+
+                  XYZ xyz = point3D.coords;
+                  IFCAggregate innerList = outerList.AddAggregate();
+                  innerList.Add(IFCData.CreateDouble(xyz.X));
+                  innerList.Add(IFCData.CreateDouble(xyz.Y));
+                  innerList.Add(IFCData.CreateDouble(xyz.Z));
+               }
+            }
+            else if (pointList.Dimensionality == IfcPointList.PointDimension.D2)
+            {
+               foreach (PointBase point in pointList.Points)
+               {
+                  Point2D point2D = point as Point2D;
+
+                  UV uv = point2D.coords;
+                  IFCAggregate innerList = outerList.AddAggregate();
+                  innerList.Add(IFCData.CreateDouble(uv.U));
+                  innerList.Add(IFCData.CreateDouble(uv.V));
+               }
+            }
+            else
+               throw new ArgumentException("Incorrect point dimension requirement");
+         }
+      }
+
+      /// <summary>
       /// Sets List of List of integer value attribute for the handle
       /// </summary>
       /// <param name="handle">the handle</param>
@@ -969,7 +1122,7 @@ namespace Revit.IFC.Common.Utility
 
          T aggregateAttribute = default(T);
 
-         if (ifcData.PrimitiveType == IFCDataPrimitiveType.Aggregate)
+         if (ifcData.PrimitiveType.ToString() == "Aggregate")
          {
             IFCAggregate aggregate = ifcData.AsAggregate();
             if (aggregate != null)
@@ -1000,7 +1153,7 @@ namespace Revit.IFC.Common.Utility
 
          T aggregateAttribute = default(T);
 
-         if (ifcData.PrimitiveType == IFCDataPrimitiveType.Aggregate)
+         if (ifcData.PrimitiveType.ToString() == "Aggregate")
          {
             IFCAggregate aggregate = ifcData.AsAggregate();
             if (aggregate != null)
@@ -1034,7 +1187,7 @@ namespace Revit.IFC.Common.Utility
 
          T aggregateAttribute = default(T);
 
-         if (ifcData.PrimitiveType == IFCDataPrimitiveType.Aggregate)
+         if (ifcData.PrimitiveType.ToString() == "Aggregate")
          {
             IFCAggregate aggregate = ifcData.AsAggregate();
             if (aggregate != null)
@@ -1068,7 +1221,7 @@ namespace Revit.IFC.Common.Utility
 
          T aggregateAttribute = default(T);
 
-         if (ifcData.PrimitiveType == IFCDataPrimitiveType.Aggregate)
+         if (ifcData.PrimitiveType.ToString() == "Aggregate")
          {
             IFCAggregate aggregate = ifcData.AsAggregate();
             if (aggregate != null)
@@ -1095,11 +1248,18 @@ namespace Revit.IFC.Common.Utility
       /// <returns>The collection of attribute values.</returns>
       public static T GetValidAggregateInstanceAttribute<T>(IFCAnyHandle handle, string name) where T : ICollection<IFCAnyHandle>, new()
       {
-         IFCData ifcData = handle.GetAttribute(name);
+         IFCData ifcData = null;
+         try
+         {
+            ifcData = handle.GetAttribute(name);
+         }
+         catch
+         {
+         }
 
          T aggregateAttribute = default(T);
 
-         if (ifcData.PrimitiveType == IFCDataPrimitiveType.Aggregate)
+         if (ifcData.PrimitiveType.ToString() == "Aggregate")
          {
             IFCAggregate aggregate = ifcData.AsAggregate();
             if (aggregate != null)
@@ -1107,7 +1267,7 @@ namespace Revit.IFC.Common.Utility
                aggregateAttribute = new T();
                foreach (IFCData val in aggregate)
                {
-                  if (val.PrimitiveType == IFCDataPrimitiveType.Instance)
+                  if (val.PrimitiveType.ToString() == "Instance")
                   {
                      aggregateAttribute.Add(val.AsInstance());
                   }
@@ -1181,7 +1341,7 @@ namespace Revit.IFC.Common.Utility
             throw new ArgumentException("Not an IfcCartesianPoint handle.");
 
          IFCData ifcData = cartesianPoint.GetAttribute("Coordinates");
-         if (ifcData.PrimitiveType == IFCDataPrimitiveType.Aggregate)
+         if (ifcData.PrimitiveType.ToString() == "Aggregate")
          {
             IFCAggregate aggregate = ifcData.AsAggregate();
             if (aggregate != null && aggregate.Count > 0)
@@ -1211,7 +1371,7 @@ namespace Revit.IFC.Common.Utility
          try
          {
             IFCData ifcData = hnd.GetAttribute(name);
-            if (ifcData.PrimitiveType == IFCDataPrimitiveType.Instance)
+            if (ifcData.PrimitiveType.ToString() == "Instance")
                return ifcData.AsInstance();
          }
          catch { }
@@ -1410,7 +1570,7 @@ namespace Revit.IFC.Common.Utility
 
          if (!ifcData.HasValue)
             return false;
-         else if (ifcData.PrimitiveType == IFCDataPrimitiveType.Aggregate)
+         else if (ifcData.PrimitiveType.ToString() == "Aggregate")
          {
             IFCAggregate aggregate = ifcData.AsAggregate();
             if (aggregate != null && aggregate.Count > 0)
@@ -1435,14 +1595,14 @@ namespace Revit.IFC.Common.Utility
 
          HashSet<IFCAnyHandle> decomposes = new HashSet<IFCAnyHandle>();
          IFCData ifcData = objectHandle.GetAttribute("IsDecomposedBy");
-         if (ifcData.PrimitiveType == IFCDataPrimitiveType.Aggregate)
+         if (ifcData.PrimitiveType.ToString() == "Aggregate")
          {
             IFCAggregate aggregate = ifcData.AsAggregate();
             if (aggregate != null && aggregate.Count > 0)
             {
                foreach (IFCData val in aggregate)
                {
-                  if (val.PrimitiveType == IFCDataPrimitiveType.Instance)
+                  if (val.PrimitiveType.ToString() == "Instance")
                   {
                      decomposes.Add(val.AsInstance());
                   }
@@ -1464,14 +1624,14 @@ namespace Revit.IFC.Common.Utility
 
          HashSet<IFCAnyHandle> hasRepresentation = new HashSet<IFCAnyHandle>();
          IFCData ifcData = objectHandle.GetAttribute("HasRepresentation");
-         if (ifcData.PrimitiveType == IFCDataPrimitiveType.Aggregate)
+         if (ifcData.PrimitiveType.ToString() == "Aggregate")
          {
             IFCAggregate aggregate = ifcData.AsAggregate();
             if (aggregate != null && aggregate.Count > 0)
             {
                foreach (IFCData val in aggregate)
                {
-                  if (val.PrimitiveType == IFCDataPrimitiveType.Instance)
+                  if (val.PrimitiveType.ToString() == "Instance")
                   {
                      hasRepresentation.Add(val.AsInstance());
                   }
@@ -1492,7 +1652,7 @@ namespace Revit.IFC.Common.Utility
             throw new ArgumentException("The operation is not valid for this handle.");
 
          IFCData ifcData = productHandle.GetAttribute("Representation");
-         if (ifcData.PrimitiveType == IFCDataPrimitiveType.Instance)
+         if (ifcData.PrimitiveType.ToString() == "Instance")
          {
             return ifcData.AsInstance();
          }
@@ -1511,7 +1671,7 @@ namespace Revit.IFC.Common.Utility
             throw new ArgumentException("The operation is not valid for this handle.");
 
          IFCData ifcData = representation.GetAttribute("ContextOfItems");
-         if (ifcData.PrimitiveType == IFCDataPrimitiveType.Instance)
+         if (ifcData.PrimitiveType.ToString() == "Instance")
          {
             return ifcData.AsInstance();
          }
@@ -1569,14 +1729,14 @@ namespace Revit.IFC.Common.Utility
 
          HashSet<IFCAnyHandle> items = new HashSet<IFCAnyHandle>();
          IFCData ifcData = representation.GetAttribute("Items");
-         if (ifcData.PrimitiveType == IFCDataPrimitiveType.Aggregate)
+         if (ifcData.PrimitiveType.ToString() == "Aggregate")
          {
             IFCAggregate aggregate = ifcData.AsAggregate();
             if (aggregate != null && aggregate.Count > 0)
             {
                foreach (IFCData val in aggregate)
                {
-                  if (val.PrimitiveType == IFCDataPrimitiveType.Instance)
+                  if (val.PrimitiveType.ToString() == "Instance")
                   {
                      items.Add(val.AsInstance());
                   }
@@ -1598,14 +1758,14 @@ namespace Revit.IFC.Common.Utility
 
          List<IFCAnyHandle> representations = new List<IFCAnyHandle>();
          IFCData ifcData = representation.GetAttribute("Representations");
-         if (ifcData.PrimitiveType == IFCDataPrimitiveType.Aggregate)
+         if (ifcData.PrimitiveType.ToString() == "Aggregate")
          {
             IFCAggregate aggregate = ifcData.AsAggregate();
             if (aggregate != null && aggregate.Count > 0)
             {
                foreach (IFCData val in aggregate)
                {
-                  if (val.PrimitiveType == IFCDataPrimitiveType.Instance)
+                  if (val.PrimitiveType.ToString() == "Instance")
                   {
                      representations.Add(val.AsInstance());
                   }
@@ -1627,14 +1787,14 @@ namespace Revit.IFC.Common.Utility
 
          List<IFCAnyHandle> openings = new List<IFCAnyHandle>();
          IFCData ifcData = ifcElement.GetAttribute("HasOpenings");
-         if (ifcData.PrimitiveType == IFCDataPrimitiveType.Aggregate)
+         if (ifcData.PrimitiveType.ToString() == "Aggregate")
          {
             IFCAggregate aggregate = ifcData.AsAggregate();
             if (aggregate != null && aggregate.Count > 0)
             {
                foreach (IFCData val in aggregate)
                {
-                  if (val.PrimitiveType == IFCDataPrimitiveType.Instance)
+                  if (val.PrimitiveType.ToString() == "Instance")
                   {
                      IFCAnyHandle relVoidElement = val.AsInstance();
                      IFCData openingElementData = relVoidElement.GetAttribute("RelatedOpeningElement");
@@ -1778,31 +1938,21 @@ namespace Revit.IFC.Common.Utility
       /// <returns>True if it is null or has no value, false otherwise.</returns>
       public static bool IsNullOrHasNoValue(IFCAnyHandle handle)
       {
-         return handle == null || !handle.HasValue;
-      }
+         if (handle == null || !handle.HasValue)
+            return true;
 
-      /// <summary>
-      /// Checks if the handle points to a valid IFC entity.  A handle could point to an 
-      /// invalid entity if it were deleted after being stored in a cache.
-      /// </summary>
-      /// <param name="handle">The handle.</param>
-      /// <returns>True if it is valid, false otherwise.</returns>
-      /// <remarks>This really should only be used on export, where there are cases
-      /// of deleted handles in caches that we need to verify before use.</remarks>
-      public static bool IsValidHandle(IFCAnyHandle handle)
-      {
-         if (IsNullOrHasNoValue(handle))
-            return false;
-
+         // Temporary code for 2022 until HasValue is set propertly when handle has become invalid
+         bool staleHandle = false;
          try
          {
-            // If the TypeName command succeeds, it means we have a valid handle.
-            return (handle.TypeName != null);
+            string entityTypeName = handle.TypeName;
          }
-         catch
+         catch 
          {
-            return false;
+            staleHandle = true;
          }
+
+         return staleHandle;
       }
 
       /// <summary>
@@ -1841,7 +1991,15 @@ namespace Revit.IFC.Common.Utility
       /// <returns>True if the handle entity is an entity of either the given type or one of its sub-types.</returns>
       public static bool IsValidSubTypeOf(IFCAnyHandle handle, IFCEntityType type)
       {
-         return handle.IsSubTypeOf(GetIFCEntityTypeName(type));
+         try
+         {
+            return handle.IsSubTypeOf(GetIFCEntityTypeName(type));
+
+         }
+         catch
+         {
+            return false;
+         }
       }
 
       /// <summary>
@@ -1858,6 +2016,27 @@ namespace Revit.IFC.Common.Utility
          if (handleType == type)
             return true;
          return handle.IsSubTypeOf(GetIFCEntityTypeName(type));
+      }
+
+      /// <summary>
+      /// Gets the <see cref="IFCDataPrimitiveType"/> value from type name.
+      /// This method is used for negotiation differences between IfCDataPrimitiveType enums in 2022.0.1 and 2022.1 APIs using string comparison.
+      /// </summary>
+      /// <param name="typeName">Primitive type name.</param>
+      /// <returns><see cref="IFCDataPrimitiveType"/> value.</returns>
+      public static IFCDataPrimitiveType GetPrimitiveTypeForOlderAPI(string typeName)
+      {
+         IFCDataPrimitiveType resultType = IFCDataPrimitiveType.Integer;
+
+         for(int iterator = 0; iterator <= 21; iterator++)
+         {
+            if (resultType.ToString() == typeName)
+               return resultType;
+            else
+               resultType++;
+         }
+
+         return resultType;
       }
 
       /// <summary>
