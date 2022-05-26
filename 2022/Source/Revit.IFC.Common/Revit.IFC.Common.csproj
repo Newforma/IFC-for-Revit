@@ -58,6 +58,14 @@
     <DefineConstants>TRACE;IFC_OPENSOURCE</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="RevitAPI, Version=22.0.0.0, Culture=neutral, PublicKeyToken=null">
+      <HintPath>..\..\packages\BIMOne.Autodesk.Revit2022.RevitAPI.22.1.21.13\lib\net48\RevitAPI.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="RevitAPIIFC, Version=22.0.0.0, Culture=neutral, PublicKeyToken=null">
+      <HintPath>..\..\packages\BIMOne.Autodesk.Revit2022.RevitAPIIFC.22.1.21.13\lib\net48\RevitAPIIFC.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Web.Extensions" />
     <Reference Include="System.XML" />
@@ -66,6 +74,9 @@
     <Compile Include="Enums\CommonEnum.cs" />
     <Compile Include="Enums\IFC2xEntityType.cs" />
     <Compile Include="Enums\IFC4EntityType.cs" />
+    <Compile Include="Enums\IFC4x1EntityType.cs" />
+    <Compile Include="Enums\IFC4x2EntityType.cs" />
+    <Compile Include="Enums\IFC4x3EntityType.cs" />
     <Compile Include="Enums\IFCEntityType.cs" />
     <Compile Include="Enums\IFCKnownMVDAndER.cs" />
     <Compile Include="Extension\IFCAddress.cs" />
@@ -112,6 +123,7 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <None Include="packages.config" />
     <Content Include="BIMOne.Revit2022.IFC.Common.nuspec" />
     <Content Include="IFC2X2_ADD1.xsd">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -125,10 +137,10 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="BIMOne.Autodesk.Revit2022.RevitAPI">
-      <Version>22.0.2.392</Version>
+      <Version>22.1.21.13</Version>
     </PackageReference>
     <PackageReference Include="BIMOne.Autodesk.Revit2022.RevitAPIIFC">
-      <Version>22.0.2.392</Version>
+      <Version>22.1.21.13</Version>
     </PackageReference>
   </ItemGroup>
   <Import Project=".\Revit.IFC.Common.props" />

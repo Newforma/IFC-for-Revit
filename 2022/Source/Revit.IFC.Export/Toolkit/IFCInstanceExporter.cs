@@ -963,7 +963,7 @@ namespace Revit.IFC.Export.Toolkit
       /// <param name="name">The name.</param>
       /// <param name="description">The description.</param>
       /// <param name="relatedObjects">Related objects, which are assigned to a single object.</param>
-      /// <param name="relatedObjectsType">Particular type of the assignment relationship.</param>
+      /// <param name="relatedObjectsType">Particular type of the assignment relationship. Must be unset for IFC4 and greater.</param>
       private static void ValidateRelAssigns(string guid, IFCAnyHandle ownerHistory,
           string name, ICollection<IFCAnyHandle> relatedObjects, IFCObjectType? relatedObjectsType)
       {
@@ -971,6 +971,9 @@ namespace Revit.IFC.Export.Toolkit
             IFCAnyHandleUtil.ValidateSubTypeOf(relatedObjects, false, IFCEntityType.IfcObject);
          else
             IFCAnyHandleUtil.ValidateSubTypeOf(relatedObjects, false, IFCEntityType.IfcObjectDefinition);
+
+         if(!ExporterCacheManager.ExportOptionsCache.ExportAsOlderThanIFC4 && relatedObjectsType != null)
+            throw new ArgumentException("Invalid IfcRelAssigns.relatedObjectsType.", "relatedObjectsType");
 
          ValidateRelationship(guid, ownerHistory);
       }
@@ -984,7 +987,7 @@ namespace Revit.IFC.Export.Toolkit
       /// <param name="name">The name.</param>
       /// <param name="description">The description.</param>
       /// <param name="relatedObjects">Related objects, which are assigned to a single object.</param>
-      /// <param name="relatedObjectsType">Particular type of the assignment relationship.</param>
+      /// <param name="relatedObjectsType">Particular type of the assignment relationship. Must be unset for IFC4 and greater.</param>
       private static void SetRelAssigns(IFCAnyHandle relAssigns, string guid, IFCAnyHandle ownerHistory,
           string name, string description, ISet<IFCAnyHandle> relatedObjects, IFCObjectType? relatedObjectsType)
       {
@@ -1146,6 +1149,11 @@ namespace Revit.IFC.Export.Toolkit
          if (theList != null)
             if (theList.Count == 1 && theList.FirstOrDefault().Count == 0)
                throw new ArgumentNullException(name);
+      }
+      private static void ValidateListOfPoints(IFCAnyHandleUtil.IfcPointList theList, string name)
+      {
+         if (theList == null || theList.Count < 2 || theList.Dimensionality == IFCAnyHandleUtil.IfcPointList.PointDimension.NotSet)
+            throw new ArgumentNullException(name);
       }
 
       /// <summary>
@@ -3139,7 +3147,7 @@ namespace Revit.IFC.Export.Toolkit
       /// <param name="methodOfMeasurement">Name of the method of measurement used to calculate the element quantity.</param>
       /// <param name="quantities">The individual quantities for the element.</param>
       /// <returns>The handle.</returns>
-      public static IFCAnyHandle CreateElementQuantity(IFCFile file, string guid, IFCAnyHandle ownerHistory,
+      public static IFCAnyHandle CreateElementQuantity(IFCFile file, IFCAnyHandle elemHnd, string guid, IFCAnyHandle ownerHistory,
           string name, string description, string methodOfMeasurement, HashSet<IFCAnyHandle> quantities)
       {
          IFCAnyHandleUtil.ValidateSubTypeOf(quantities, false, IFCEntityType.IfcPhysicalQuantity);
@@ -3150,6 +3158,7 @@ namespace Revit.IFC.Export.Toolkit
          IFCAnyHandleUtil.SetAttribute(elementQuantity, "MethodOfMeasurement", methodOfMeasurement);
          IFCAnyHandleUtil.SetAttribute(elementQuantity, "Quantities", quantities);
          SetPropertySetDefinition(elementQuantity, guid, ownerHistory, name, description);
+         ExporterCacheManager.QtoSetCreated.Add((elemHnd, name));
          return elementQuantity;
       }
 
@@ -3865,6 +3874,26 @@ namespace Revit.IFC.Export.Toolkit
 
          return CreateCartesianPointList3D;
       }
+      /// <summary>
+      /// Create IFC instance of IfcCartesianPointList3D
+      /// </summary>
+      /// <param name="file">The file</param>
+      /// <param name="coordinateList">the list of the 3D coordinates</param>
+      /// <returns>The handle</returns>
+      public static IFCAnyHandle CreateCartesianPointList(IFCFile file, IFCAnyHandleUtil.IfcPointList coordinateList)
+      {
+         ValidateListOfPoints(coordinateList, "CoordinateList");
+
+         IFCAnyHandle CreateCartesianPointList = null;
+         if (coordinateList[0] as Point3D != null)
+            CreateCartesianPointList = CreateInstance(file, IFCEntityType.IfcCartesianPointList3D, null);
+         else
+            CreateCartesianPointList = CreateInstance(file, IFCEntityType.IfcCartesianPointList2D, null);
+
+         IFCAnyHandleUtil.SetAttribute(CreateCartesianPointList, "CoordList", coordinateList, 1, null);
+
+         return CreateCartesianPointList;
+      }
 
       public static IFCData CreateLineIndexType(IFCFile file, IList<int> lineIndexList)
       {
@@ -3896,7 +3925,7 @@ namespace Revit.IFC.Export.Toolkit
          return arcIndexData;
       }
 
-      public static IFCAnyHandle CreateIndexedPolyCurve(IFCFile file, IFCAnyHandle coordinates, IList<IList<int>> segmentIndexList, bool? selfIntersect)
+      public static IFCAnyHandle OutdatedCreateIndexedPolyCurve(IFCFile file, IFCAnyHandle coordinates, IList<IList<int>> segmentIndexList, bool? selfIntersect)
       {
          if (coordinates == null)
             throw new ArgumentNullException("Points");
@@ -3908,6 +3937,63 @@ namespace Revit.IFC.Export.Toolkit
          IFCAnyHandleUtil.SetAttribute(indexedPolyCurveHnd, "Points", coordinates);
          if (segmentIndexList != null)
             IFCAnyHandleUtil.SetAttribute(indexedPolyCurveHnd, "Segments", segmentIndexList, 1, null, 2, null);
+         IFCAnyHandleUtil.SetAttribute(indexedPolyCurveHnd, "SelfIntersect", selfIntersect);
+
+         return indexedPolyCurveHnd;
+      }
+
+      public static IFCAnyHandle CreateIndexedPolyCurve(IFCFile file, IFCAnyHandle coordinates, IList<GeometryUtil.SegmentIndices> segmentIndexList, bool? selfIntersect)
+      {
+         if (coordinates == null)
+            throw new ArgumentNullException("Points");
+         IFCAnyHandleUtil.ValidateSubTypeOf(coordinates, false, IFCEntityType.IfcCartesianPointList);
+         if (segmentIndexList != null && segmentIndexList.Count == 0)
+            throw new ArgumentNullException("Segments");
+         IFCAnyHandle indexedPolyCurveHnd = CreateInstance(file, IFCEntityType.IfcIndexedPolyCurve, null);
+         IFCAnyHandleUtil.SetAttribute(indexedPolyCurveHnd, "Points", coordinates);
+         if (segmentIndexList != null)
+         {
+            IFCAggregate segments = indexedPolyCurveHnd.CreateAggregateAttribute("Segments");
+            int numSegments = 0;
+            foreach (GeometryUtil.SegmentIndices segmentIndices in segmentIndexList)
+            {
+               if (segmentIndices.IsCalculated == false)
+                  throw new ArgumentNullException("Segments");
+
+               IFCData segment = null;
+
+               // Note. In Revit 2022.1, CreateValueOfType does not add the segment to
+               // the IFCAggregate.  In Revit 2022.1.1, because of the ODA toolkit upgrade,
+               // it does.  So we need to check the size of the aggregate before and after
+               // the call to see if we need to add the new value or not.
+               var polyLineIndices = segmentIndices as GeometryUtil.PolyLineIndices;
+               if (polyLineIndices != null)
+               {
+                  segment = segments.CreateValueOfType("IfcLineIndex");
+                  IFCAggregate lineIndexAggr = segment.AsAggregate();
+                  foreach (int index in polyLineIndices.Indices)
+                     lineIndexAggr.Add(IFCData.CreateInteger(index));
+               }
+               else
+               {
+                  var arcIndices = segmentIndices as GeometryUtil.ArcIndices;
+                  if (arcIndices != null)
+                  {
+                     segment = segments.CreateValueOfType("IfcArcIndex");
+                     IFCAggregate arcIndexAggr = segment.AsAggregate();
+                     arcIndexAggr.Add(IFCData.CreateInteger(arcIndices.Start));
+                     arcIndexAggr.Add(IFCData.CreateInteger(arcIndices.Mid));
+                     arcIndexAggr.Add(IFCData.CreateInteger(arcIndices.End));
+                  }
+               }
+
+               int newNumSegments = segments.Count;
+               if (numSegments == newNumSegments)
+                  segments.Add(segment);
+               numSegments++;
+            }
+         }
+
          IFCAnyHandleUtil.SetAttribute(indexedPolyCurveHnd, "SelfIntersect", selfIntersect);
 
          return indexedPolyCurveHnd;
@@ -5511,6 +5597,36 @@ namespace Revit.IFC.Export.Toolkit
          return electricalCircuit;
       }
 
+
+      /// <summary>
+      /// Creates an IfcDistributionSystem, and assigns it to the file.
+      /// </summary>
+      /// <param name="file">The file.</param>
+      /// <param name="entityToCreate">The specific Entity (Enum) to create</param>
+      /// <param name="guid">The GUID.</param>
+      /// <param name="ownerHistory">The owner history.</param>
+      /// <param name="name">The name.</param>
+      /// <param name="description">The description.</param>
+      /// <param name="objectType">The object type.</param>
+      /// <param name="longName">The long name.</param>
+      /// <returns></returns>
+      public static IFCAnyHandle CreateDistributionSystem(IFCFile file, string guid, IFCAnyHandle ownerHistory, string name,
+         string description, string objectType, string longName, string predefinedType)
+      {
+         if (ExporterCacheManager.ExportOptionsCache.ExportAsOlderThanIFC4)
+            return null;
+
+         IFCAnyHandle buildingSystem = CreateInstance(file, IFCEntityType.IfcDistributionSystem, null);
+         SetSystem(buildingSystem, guid, ownerHistory, name, description, objectType);
+
+         if (!string.IsNullOrEmpty(predefinedType))
+            IFCAnyHandleUtil.SetAttribute(buildingSystem, "PredefinedType", predefinedType, true);
+         if (!string.IsNullOrEmpty(longName))
+            IFCAnyHandleUtil.SetAttribute(buildingSystem, "LongName", longName, false);
+
+         return buildingSystem;
+      }
+
       /// <summary>
       /// Creates an IfcSystem, and assigns it to the file.
       /// </summary>
@@ -5623,17 +5739,12 @@ namespace Revit.IFC.Export.Toolkit
       public static IFCAnyHandle CreateBuildingElementProxy(ExporterIFC exporterIFC, Element element, string guid, IFCAnyHandle ownerHistory,
           IFCAnyHandle objectPlacement, IFCAnyHandle representation, string predefinedType)
       {
-         //ValidateElement(guid, ownerHistory, objectPlacement, representation);
-
          IFCAnyHandle buildingElementProxy = CreateInstance(exporterIFC.GetFile(), IFCEntityType.IfcBuildingElementProxy, element);
-         if (ExporterCacheManager.ExportOptionsCache.ExportAsOlderThanIFC4)
+         // We do not support CompositionType for IFC2x3, as it does not match the 
+         // IfcBuildingElementProxyType "PredefinedType" values.
+         if (!ExporterCacheManager.ExportOptionsCache.ExportAsOlderThanIFC4)
          {
-            if (!string.IsNullOrEmpty(predefinedType) && !predefinedType.Equals("NOTDEFINED", StringComparison.InvariantCultureIgnoreCase))
-               IFCAnyHandleUtil.SetAttribute(buildingElementProxy, "CompositionType", predefinedType, true);
-         }
-         else
-         {
-            IFCAnyHandleUtil.SetAttribute(buildingElementProxy, "preDefinedType", predefinedType, true);
+            IFCAnyHandleUtil.SetAttribute(buildingElementProxy, "PredefinedType", predefinedType, true);
          }
          SetElement(buildingElementProxy, element, guid, ownerHistory, null, null, null, objectPlacement, representation, null);
          return buildingElementProxy;
@@ -6900,6 +7011,15 @@ namespace Revit.IFC.Export.Toolkit
          return quantityVolume;
       }
 
+      /// <summary>
+      /// Creates an IfcQuantityWeight and assigns it to the file.
+      /// </summary>
+      /// <param name="file">The file</param>
+      /// <param name="name">The name</param>
+      /// <param name="description">The description</param>
+      /// <param name="unit">The unit</param>
+      /// <param name="weightValue">The value of the quantity, in the appropriate units.</param>
+      /// <returns>The handle</returns>
       public static IFCAnyHandle CreateQuantityWeight(IFCFile file, string name, string description, IFCAnyHandle unit, double weightValue)
       {
          ValidatePhysicalSimpleQuantity(name, description, unit);
@@ -6908,6 +7028,44 @@ namespace Revit.IFC.Export.Toolkit
          IFCAnyHandleUtil.SetAttribute(quantityWeight, "WeightValue", weightValue);
          SetPhysicalSimpleQuantity(quantityWeight, name, description, unit);
          return quantityWeight;
+      }
+
+      /// <summary>
+      /// Creates an IfcQuantityCount and assigns it to the file.
+      /// </summary>
+      /// <param name="file">The file</param>
+      /// <param name="name">The name</param>
+      /// <param name="description">The description</param>
+      /// <param name="unit">The unit</param>
+      /// <param name="weightValue">The value of the quantity, in the appropriate units.</param>
+      /// <returns>The handle</returns>
+      public static IFCAnyHandle CreateQuantityCount(IFCFile file, string name, string description, IFCAnyHandle unit, int countValue)
+      {
+         ValidatePhysicalSimpleQuantity(name, description, unit);
+
+         IFCAnyHandle quantityCount = CreateInstance(file, IFCEntityType.IfcQuantityCount, null);
+         IFCAnyHandleUtil.SetAttribute(quantityCount, "CountValue", countValue);
+         SetPhysicalSimpleQuantity(quantityCount, name, description, unit);
+         return quantityCount;
+      }
+
+      /// <summary>
+      /// Creates an IfcQuantityTime and assigns it to the file.
+      /// </summary>
+      /// <param name="file">The file</param>
+      /// <param name="name">The name</param>
+      /// <param name="description">The description</param>
+      /// <param name="unit">The unit</param>
+      /// <param name="weightValue">The value of the quantity, in the appropriate units.</param>
+      /// <returns>The handle</returns>
+      public static IFCAnyHandle CreateQuantityTime(IFCFile file, string name, string description, IFCAnyHandle unit, double timeValue)
+      {
+         ValidatePhysicalSimpleQuantity(name, description, unit);
+
+         IFCAnyHandle quantityTime = CreateInstance(file, IFCEntityType.IfcQuantityTime, null);
+         IFCAnyHandleUtil.SetAttribute(quantityTime, "TimeValue", timeValue);
+         SetPhysicalSimpleQuantity(quantityTime, name, description, unit);
+         return quantityTime;
       }
 
       /// <summary>
@@ -6920,7 +7078,7 @@ namespace Revit.IFC.Export.Toolkit
       /// <param name="description">The description.</param>
       /// <param name="relatingPort">The port handle.</param>
       /// <param name="relatedPort">The port handle.</param>
-      /// <param name="realizingElement">The element handle.</param>
+      /// <param name="realizingElement">The element handle. Must be null for IFC4RV.</param>
       /// <returns>The handle.</returns>
       public static IFCAnyHandle CreateRelConnectsPorts(IFCFile file, string guid, IFCAnyHandle ownerHistory, string name, string description,
           IFCAnyHandle relatingPort, IFCAnyHandle relatedPort, IFCAnyHandle realizingElement)
@@ -6928,6 +7086,8 @@ namespace Revit.IFC.Export.Toolkit
          ValidateRelConnects(guid, ownerHistory, name);
          IFCAnyHandleUtil.ValidateSubTypeOf(relatingPort, false, IFCEntityType.IfcPort);
          IFCAnyHandleUtil.ValidateSubTypeOf(relatedPort, false, IFCEntityType.IfcPort);
+         if (ExporterCacheManager.ExportOptionsCache.ExportAs4ReferenceView && realizingElement != null)
+            throw new ArgumentException("IfcRelConnectsPorts.RealizingElement must be null for IFC4RV.", "RealizingElement");
          IFCAnyHandleUtil.ValidateSubTypeOf(realizingElement, true, IFCEntityType.IfcElement);
 
          IFCAnyHandle relConnectsPorts = CreateInstance(file, IFCEntityType.IfcRelConnectsPorts, null);
@@ -7519,13 +7679,15 @@ namespace Revit.IFC.Export.Toolkit
       /// <param name="name">The name.</param>
       /// <param name="description">The description.</param>
       /// <param name="nominalValue">The value of the property.</param>
-      /// <param name="unit">The unit.</param>
+      /// <param name="unit">The unit. Must be unset for IFC4RV.</param>
       /// <returns>The handle.</returns>
       public static IFCAnyHandle CreatePropertySingleValue(IFCFile file,
           string name, string description, IFCData nominalValue, IFCAnyHandle unit)
       {
          ValidateProperty(name, description);
          IFCAnyHandleUtil.ValidateSubTypeOf(unit, true, IFCEntityType.IfcDerivedUnit, IFCEntityType.IfcNamedUnit, IFCEntityType.IfcMonetaryUnit);
+         if (ExporterCacheManager.ExportOptionsCache.ExportAs4ReferenceView && unit != null)
+            throw new ArgumentException("IfcPropertySingleValue.Unit must be null for IFC4RV.", "unit");
 
          IFCAnyHandle propertySingleValue = CreateInstance(file, IFCEntityType.IfcPropertySingleValue, null);
          IFCAnyHandleUtil.SetAttribute(propertySingleValue, "NominalValue", nominalValue);
@@ -7590,19 +7752,80 @@ namespace Revit.IFC.Export.Toolkit
       /// <param name="name">The name.</param>
       /// <param name="description">The description.</param>
       /// <param name="listValues">The values of the property.</param>
-      /// <param name="unit">The unit.</param>
+      /// <param name="unit">The unit. Must be unset for IFC4RV.</param>
       /// <returns>The handle.</returns>
       public static IFCAnyHandle CreatePropertyListValue(IFCFile file,
           string name, string description, IList<IFCData> listValues, IFCAnyHandle unit)
       {
          ValidateProperty(name, description);
          IFCAnyHandleUtil.ValidateSubTypeOf(unit, true, IFCEntityType.IfcDerivedUnit, IFCEntityType.IfcNamedUnit, IFCEntityType.IfcMonetaryUnit);
+         if (ExporterCacheManager.ExportOptionsCache.ExportAs4ReferenceView && unit != null)
+            throw new ArgumentException("IfcPropertyListValue.Unit must be null for IFC4RV.", "unit");
 
          IFCAnyHandle propertyListValue = CreateInstance(file, IFCEntityType.IfcPropertyListValue, null);
          IFCAnyHandleUtil.SetAttribute(propertyListValue, "ListValues", listValues);
          IFCAnyHandleUtil.SetAttribute(propertyListValue, "Unit", unit);
          SetProperty(propertyListValue, name, description);
          return propertyListValue;
+      }
+
+      /// <summary>
+      /// Creates an IfcPropertyTableValue and assigns it to the file.
+      /// </summary>
+      /// <param name="file">The file.</param>
+      /// <param name="name">The name.</param>
+      /// <param name="description">The description.</param>
+      /// <param name="definingValues">The defining values of the property.</param>
+      /// <param name="definedValues">The defined values of the property.</param>
+      /// <param name="definingUnit">Unit for the defining values. Must be unset for IFC4RV.</param>
+      /// <param name="definedUnit">Unit for the defined values. Must be unset for IFC4RV.</param>
+      /// <returns>The handle.</returns>
+      public static IFCAnyHandle CreatePropertyTableValue(IFCFile file,
+          string name, string description, IList<IFCData> definingValues, IList<IFCData> definedValues, IFCAnyHandle definingUnit, IFCAnyHandle definedUnit)
+      {
+         ValidateProperty(name, description);
+         IFCAnyHandleUtil.ValidateSubTypeOf(definingUnit, true, IFCEntityType.IfcDerivedUnit, IFCEntityType.IfcNamedUnit, IFCEntityType.IfcMonetaryUnit);
+         if (ExporterCacheManager.ExportOptionsCache.ExportAs4ReferenceView && definingUnit != null)
+            throw new ArgumentException("IfcPropertyTableValue.DefiningUnit must be null for IFC4RV.", "definingUnit");
+
+         IFCAnyHandleUtil.ValidateSubTypeOf(definingUnit, true, IFCEntityType.IfcDerivedUnit, IFCEntityType.IfcNamedUnit, IFCEntityType.IfcMonetaryUnit);
+         if (ExporterCacheManager.ExportOptionsCache.ExportAs4ReferenceView && definedUnit != null)
+            throw new ArgumentException("IfcPropertyTableValue.DefinedUnit must be null for IFC4RV.", "definedUnit");
+
+         IFCAnyHandle propertyTableValue = CreateInstance(file, IFCEntityType.IfcPropertyTableValue, null);
+         IFCAnyHandleUtil.SetAttribute(propertyTableValue, "DefiningValues", definingValues);
+         IFCAnyHandleUtil.SetAttribute(propertyTableValue, "DefinedValues", definedValues);
+         IFCAnyHandleUtil.SetAttribute(propertyTableValue, "DefiningUnit", definingUnit);
+         IFCAnyHandleUtil.SetAttribute(propertyTableValue, "DefinedUnit", definedUnit);
+         SetProperty(propertyTableValue, name, description);
+         return propertyTableValue;
+      }
+
+      /// <summary>
+      /// Creates an IfcPropertyBoundedValue and assigns it to the file.
+      /// </summary>
+      /// <param name="file">The file.</param>
+      /// <param name="name">The name.</param>
+      /// <param name="description">The description.</param>
+      /// <param name="lowerBoundValue">The lower bound value of the property.</param>
+      /// <param name="upperBoundValue">The upper bound value of the property.</param>
+      /// <param name="setPointValue">The point value of the property.</param>
+      /// <param name="unit">The unit.</param>
+      /// <returns>The handle.</returns>
+      public static IFCAnyHandle CreatePropertyBoundedValue(IFCFile file,
+          string name, string description, IFCData lowerBoundValue, IFCData upperBoundValue, IFCData setPointValue, IFCAnyHandle unit)
+      {
+         ValidateProperty(name, description);
+         IFCAnyHandleUtil.ValidateSubTypeOf(unit, true, IFCEntityType.IfcDerivedUnit, IFCEntityType.IfcNamedUnit, IFCEntityType.IfcMonetaryUnit);
+
+         IFCAnyHandle propertyBoundedValue = CreateInstance(file, IFCEntityType.IfcPropertyBoundedValue, null);
+         IFCAnyHandleUtil.SetAttribute(propertyBoundedValue, "LowerBoundValue", lowerBoundValue);
+         IFCAnyHandleUtil.SetAttribute(propertyBoundedValue, "UpperBoundValue", upperBoundValue);
+         IFCAnyHandleUtil.SetAttribute(propertyBoundedValue, "SetPointValue", setPointValue);
+         IFCAnyHandleUtil.SetAttribute(propertyBoundedValue, "Unit", unit);
+
+         SetProperty(propertyBoundedValue, name, description);
+         return propertyBoundedValue;
       }
 
       /// <summary>

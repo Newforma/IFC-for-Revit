@@ -165,8 +165,7 @@ namespace Revit.IFC.Export.Exporter
 
             ParamExprListener.ResetParamExprInternalDicts();
             InitializeElementExporters();
-            if (m_ElementExporter != null)
-               m_ElementExporter(exporterIFC, document);
+            m_ElementExporter?.Invoke(exporterIFC, document);
 
             EndExport(exporterIFC, document);
             WriteIFCFile(exporterIFC, document);
@@ -373,7 +372,7 @@ namespace Revit.IFC.Export.Exporter
          // couldn't be exported above.
          // Note that FilteredElementCollector is one use only, so we need to create a new one here.
          FilteredElementCollector spatialElementCollector = GetExportElementCollector(document, useFilterViewInCollector);
-         SpatialElementExporter.InitializeSpatialElementGeometryCalculator(document, exporterIFC);
+         SpatialElementExporter.InitializeSpatialElementGeometryCalculator(document);
          ElementFilter spatialElementFilter = ElementFilteringUtil.GetSpatialElementFilter(document, exporterIFC);
          spatialElementCollector.WherePasses(spatialElementFilter);
 
@@ -648,7 +647,7 @@ namespace Revit.IFC.Export.Exporter
          }
          catch (System.Exception ex)
          {
-            HandleUnexpectedException(ex, exporterIFC, element);
+            HandleUnexpectedException(ex, element);
             return false;
          }
 
@@ -660,7 +659,7 @@ namespace Revit.IFC.Export.Exporter
       /// </summary>
       /// <param name="ex">The unexpected exception.</param>
       /// <param name="element ">The element got the exception.</param>
-      internal void HandleUnexpectedException(Exception exception, ExporterIFC exporterIFC, Element element)
+      internal void HandleUnexpectedException(Exception exception, Element element)
       {
          Document document = element.Document;
          string errMsg = String.Format("IFC error: Exporting element \"{0}\",{1} - {2}", element.Name, element.Id, exception.ToString());
@@ -685,7 +684,7 @@ namespace Revit.IFC.Export.Exporter
       /// <param name="exporterIFC">The IFC exporter object.</param>
       /// <param name="element">The element to check.</param>
       /// <returns>True for MEP type of elements.</returns>
-      private bool IsMEPType(ExporterIFC exporterIFC, Element element, IFCExportInfoPair exportType)
+      private bool IsMEPType(Element element, IFCExportInfoPair exportType)
       {
          return (ElementFilteringUtil.IsMEPType(exportType) || ElementFilteringUtil.ProxyForMEPType(element, exportType));
       }
@@ -975,7 +974,7 @@ namespace Revit.IFC.Export.Exporter
                   // We would then in addition have specialized functions that would convert specific Revit elements to specific IFC instances where extra information
                   // could be gathered from the element.
                   bool exported = false;
-                  if (IsMEPType(exporterIFC, element, exportType))
+                  if (IsMEPType(element, exportType))
                   {
                      exported = GenericMEPExporter.Export(exporterIFC, element, geomElem, exportType, ifcEnumType, productWrapper);
                   }
@@ -1344,7 +1343,7 @@ namespace Revit.IFC.Export.Exporter
             ISet<IFCAnyHandle> validHandles = new HashSet<IFCAnyHandle>();
             foreach (IFCAnyHandle handle in presentationLayerSet.Value)
             {
-               if (IFCAnyHandleUtil.IsValidHandle(handle))
+               if (!IFCAnyHandleUtil.IsNullOrHasNoValue(handle))
                {
                   validHandles.Add(handle);
                   assignedRepresentations.Add(handle);
@@ -1366,7 +1365,7 @@ namespace Revit.IFC.Export.Exporter
             IList<IFCAnyHandle> initialSet = presentationLayerAssignment.Value;
             foreach (IFCAnyHandle currItem in initialSet)
             {
-               if (IFCAnyHandleUtil.IsValidHandle(currItem) && !assignedRepresentations.Contains(currItem))
+               if (!IFCAnyHandleUtil.IsNullOrHasNoValue(currItem) && !assignedRepresentations.Contains(currItem))
                   newLayeredItemSet.Add(currItem);
             }
 
@@ -1920,111 +1919,8 @@ namespace Revit.IFC.Export.Exporter
             }
 
             // Create systems.
-            using (ProductWrapper productWrapper = ProductWrapper.Create(exporterIFC, true))
-            {
-               foreach (KeyValuePair<ElementId, ISet<IFCAnyHandle>> system in ExporterCacheManager.SystemsCache.BuiltInSystemsCache)
-               {
-                  MEPSystem systemElem = document.GetElement(system.Key) as MEPSystem;
-                  if (systemElem == null)
-                     continue;
-
-                  Element baseEquipment = systemElem.BaseEquipment;
-                  if (baseEquipment != null)
-                  {
-                     IFCAnyHandle memberHandle = ExporterCacheManager.MEPCache.Find(baseEquipment.Id);
-                     if (!IFCAnyHandleUtil.IsNullOrHasNoValue(memberHandle))
-                        system.Value.Add(memberHandle);
-                  }
-
-                  ElementType systemElemType = document.GetElement(systemElem.GetTypeId()) as ElementType;
-                  string name = NamingUtil.GetNameOverride(systemElem, systemElem.Name);
-                  string desc = NamingUtil.GetDescriptionOverride(systemElem, null);
-                  string objectType = NamingUtil.GetObjectTypeOverride(systemElem,
-                      (systemElemType != null) ? systemElemType.Name : "");
-
-                  string systemGUID = GUIDUtil.CreateGUID(systemElem);
-                  IFCAnyHandle systemHandle = IFCInstanceExporter.CreateSystem(file, systemGUID,
-                      ownerHistory, name, desc, objectType);
-
-                  // Create classification reference when System has classification filed name assigned to it
-                  ClassificationUtil.CreateClassification(exporterIFC, file, systemElem, systemHandle);
-
-                  productWrapper.AddSystem(systemElem, systemHandle);
-
-                  if (projectHasBuilding)
-                  {
-                     CreateRelServicesBuildings(buildingHandle, file, ownerHistory, systemHandle);
-                  }
-
-                  IFCObjectType? objType = null;
-                  if (!ExporterCacheManager.ExportOptionsCache.ExportAsCoordinationView2)
-                     objType = IFCObjectType.Product;
-                  IFCAnyHandle relAssignsToGroup = IFCInstanceExporter.CreateRelAssignsToGroup(file, GUIDUtil.CreateGUID(),
-                      ownerHistory, null, null, system.Value, objType, systemHandle);
-               }
-            }
-
-            using (ProductWrapper productWrapper = ProductWrapper.Create(exporterIFC, true))
-            {
-               foreach (KeyValuePair<ElementId, ISet<IFCAnyHandle>> entries in ExporterCacheManager.SystemsCache.ElectricalSystemsCache)
-               {
-                  ElementId systemId = entries.Key;
-                  MEPSystem systemElem = document.GetElement(systemId) as MEPSystem;
-                  if (systemElem == null)
-                     continue;
-
-                  Element baseEquipment = systemElem.BaseEquipment;
-                  if (baseEquipment != null)
-                  {
-                     IFCAnyHandle memberHandle = ExporterCacheManager.MEPCache.Find(baseEquipment.Id);
-                     if (!IFCAnyHandleUtil.IsNullOrHasNoValue(memberHandle))
-                        entries.Value.Add(memberHandle);
-                  }
-
-                  // The Elements property below can throw an InvalidOperationException in some cases, which could
-                  // crash the export.  Protect against this without having too generic a try/catch block.
-                  try
-                  {
-                     ElementSet members = systemElem.Elements;
-                     foreach (Element member in members)
-                     {
-                        IFCAnyHandle memberHandle = ExporterCacheManager.MEPCache.Find(member.Id);
-                        if (!IFCAnyHandleUtil.IsNullOrHasNoValue(memberHandle))
-                           entries.Value.Add(memberHandle);
-                     }
-                  }
-                  catch
-                  {
-                  }
-
-                  if (entries.Value.Count == 0)
-                     continue;
-
-                  ElementType systemElemType = document.GetElement(systemElem.GetTypeId()) as ElementType;
-                  string name = NamingUtil.GetNameOverride(systemElem, systemElem.Name);
-                  string desc = NamingUtil.GetDescriptionOverride(systemElem, null);
-                  string objectType = NamingUtil.GetObjectTypeOverride(systemElem,
-                      (systemElemType != null) ? systemElemType.Name : "");
-
-                  string systemGUID = GUIDUtil.CreateGUID(systemElem);
-                  IFCAnyHandle systemHandle = IFCInstanceExporter.CreateSystem(file,
-                      systemGUID, ownerHistory, name, desc, objectType);
-
-                  // Create classification reference when System has classification filed name assigned to it
-                  ClassificationUtil.CreateClassification(exporterIFC, file, systemElem, systemHandle);
-
-                  productWrapper.AddSystem(systemElem, systemHandle);
-
-                  if (projectHasBuilding)
-                     CreateRelServicesBuildings(buildingHandle, file, ownerHistory, systemHandle);
-
-                  IFCObjectType? objType = null;
-                  if (!ExporterCacheManager.ExportOptionsCache.ExportAsCoordinationView2)
-                     objType = IFCObjectType.Product;
-                  IFCAnyHandle relAssignsToGroup = IFCInstanceExporter.CreateRelAssignsToGroup(file, GUIDUtil.CreateGUID(),
-                      ownerHistory, null, null, entries.Value, objType, systemHandle);
-               }
-            }
+            ExportCachedSystem(exporterIFC, document, file, ExporterCacheManager.SystemsCache.BuiltInSystemsCache, ownerHistory, buildingHandle,  projectHasBuilding, false);
+            ExportCachedSystem(exporterIFC, document, file, ExporterCacheManager.SystemsCache.ElectricalSystemsCache, ownerHistory, buildingHandle, projectHasBuilding, true);
 
             // Add presentation layer assignments - this is in addition to those created internally.
             // Any representation in this list will override any internal assignment.
@@ -2130,9 +2026,9 @@ namespace Revit.IFC.Export.Exporter
                descriptions.Add("Options [Excluded Entities: " + ExporterCacheManager.ExportOptionsCache.ExcludeFilter + "]");
             }
 
-            string projectNumber = (projectInfo != null) ? projectInfo.Number : null;
-            string projectName = (projectInfo != null) ? projectInfo.Name : null;
-            string projectStatus = (projectInfo != null) ? projectInfo.Status : null;
+            string projectNumber = projectInfo?.Number;
+            string projectName = projectInfo?.Name;
+            string projectStatus = projectInfo?.Status;
 
             if (projectNumber == null)
                projectNumber = string.Empty;
@@ -2588,7 +2484,7 @@ namespace Revit.IFC.Export.Exporter
          }
          else
          {
-            IFCAnyHandle telecomAddress = GetTelecomAddressFromExtStorage(file, doc);
+            IFCAnyHandle telecomAddress = GetTelecomAddressFromExtStorage(file);
             IList<IFCAnyHandle> telecomAddresses = null;
             if (telecomAddress != null)
             {
@@ -2645,8 +2541,8 @@ namespace Revit.IFC.Export.Exporter
          else
          {
             // As per IFC implementer's agreement, we get IfcProject.Name from ProjectInfo.Number and IfcProject.Longname from ProjectInfo.Name 
-            projectName = (projectInfo != null) ? projectInfo.Number : null;
-            projectLongName = (projectInfo != null) ? projectInfo.Name : null;
+            projectName = projectInfo?.Number;
+            projectLongName = projectInfo?.Name;
 
             // Get project description if it is set in the Project info
             projectDescription = (projectInfo != null) ? NamingUtil.GetDescriptionOverride(projectInfo, null) : null;
@@ -2703,7 +2599,7 @@ namespace Revit.IFC.Export.Exporter
          IFCAnyHandle contactEntry = IFCInstanceExporter.CreatePersonAndOrganization(file, contactPerson, contactOrganization, actorRoles);
       }
 
-      private IFCAnyHandle GetTelecomAddressFromExtStorage(IFCFile file, Document document)
+      private IFCAnyHandle GetTelecomAddressFromExtStorage(IFCFile file)
       {
          IFCFileHeaderItem fHItem = ExporterCacheManager.ExportOptionsCache.FileHeaderItem;
          if (!String.IsNullOrEmpty(fHItem.AuthorEmail))
@@ -3289,6 +3185,33 @@ namespace Revit.IFC.Export.Exporter
             ExporterCacheManager.UnitsCache.AddUnit(SpecTypeId.AirFlow, volumetricFlowRateUnit, volumetricFlowRateFactor, 0.0);
          }
 
+         // Mass flow rate - support kg/s only.
+         {
+            ISet<IFCAnyHandle> elements = new HashSet<IFCAnyHandle>();
+            elements.Add(IFCInstanceExporter.CreateDerivedUnitElement(file, massSIUnit, 1));
+            elements.Add(IFCInstanceExporter.CreateDerivedUnitElement(file, timeSIUnit, -1));
+
+            IFCAnyHandle massFlowRateUnit = IFCInstanceExporter.CreateDerivedUnit(file, elements,
+                IFCDerivedUnitEnum.MassFlowRateUnit, null);
+            unitSet.Add(massFlowRateUnit);
+
+            double massFlowRateFactor = UnitUtils.ConvertFromInternalUnits(1.0, UnitTypeId.KilogramsPerSecond);
+            ExporterCacheManager.UnitsCache.AddUnit(SpecTypeId.PipingMassPerTime, massFlowRateUnit, massFlowRateFactor, 0.0);
+         }
+
+         // Rotational frequency - support cycles/s only.
+         {
+            ISet<IFCAnyHandle> elements = new HashSet<IFCAnyHandle>();
+            elements.Add(IFCInstanceExporter.CreateDerivedUnitElement(file, timeSIUnit, -1));
+
+            IFCAnyHandle rotationalFrequencyUnit = IFCInstanceExporter.CreateDerivedUnit(file, elements,
+                IFCDerivedUnitEnum.RotationalFrequencyUnit, null);
+            unitSet.Add(rotationalFrequencyUnit);
+
+            double rotationalFrequencyFactor = UnitUtils.ConvertFromInternalUnits(1.0, UnitTypeId.RevolutionsPerSecond);
+            ExporterCacheManager.UnitsCache.AddUnit(SpecTypeId.AngularSpeed, rotationalFrequencyUnit, rotationalFrequencyFactor, 0.0);
+         }
+
          // Electrical current - support metric ampere only.
          {
             IFCAnyHandle currentSIUnit = CreateSIUnit(file, SpecTypeId.Current, IFCUnit.ElectricCurrentUnit, IFCSIUnitName.Ampere,
@@ -3304,10 +3227,11 @@ namespace Revit.IFC.Export.Exporter
          }
 
          // Power - support metric watt only.
+         IFCAnyHandle powerSIUnit = null;
          {
-            IFCAnyHandle voltageSIUnit = CreateSIUnit(file, SpecTypeId.HvacPower, IFCUnit.PowerUnit, IFCSIUnitName.Watt,
+            powerSIUnit = CreateSIUnit(file, SpecTypeId.HvacPower, IFCUnit.PowerUnit, IFCSIUnitName.Watt,
                 null, UnitTypeId.Watts);
-            unitSet.Add(voltageSIUnit);      // created above, so unique.
+            unitSet.Add(powerSIUnit);      // created above, so unique.
          }
 
          // Force - support newtons (N) and kN only.
@@ -3375,6 +3299,19 @@ namespace Revit.IFC.Export.Exporter
             ExporterCacheManager.UnitsCache["LUMINOUSEFFICACY"] = luminousEfficacyUnit;
 
             unitSet.Add(luminousEfficacyUnit);
+         }
+
+         // Sound Power - support watt only.
+         {
+            ISet<IFCAnyHandle> elements = new HashSet<IFCAnyHandle>();
+            elements.Add(IFCInstanceExporter.CreateDerivedUnitElement(file, powerSIUnit, 1));
+
+            IFCAnyHandle soundPowerUnit = IFCInstanceExporter.CreateDerivedUnit(file, elements,
+                IFCDerivedUnitEnum.SoundPowerUnit, null);
+            unitSet.Add(soundPowerUnit);
+
+            double soundPowerFactor = UnitUtils.ConvertFromInternalUnits(1.0, UnitTypeId.Watts);
+            ExporterCacheManager.UnitsCache.AddUnit(SpecTypeId.Wattage, soundPowerUnit, soundPowerFactor, 0.0);
          }
 
          // Linear Velocity - support m/s only.
@@ -3914,7 +3851,7 @@ namespace Revit.IFC.Export.Exporter
             {
                // Try to get the GIS Coordinate System id from SiteLocation
                crsInfo = OptionsUtil.GetEPSGCodeFromGeoCoordDef(doc.SiteLocation);
-               if (string.IsNullOrEmpty(crsInfo.projectedCRSName))
+               if (string.IsNullOrEmpty(crsInfo.projectedCRSName) || string.IsNullOrEmpty(crsInfo.epsgCode))
                {
                   // If not set, use the default
                   epsgCode = defaultEPSGCode;
@@ -4039,5 +3976,108 @@ namespace Revit.IFC.Export.Exporter
 
          return true;
       }
+
+      /// <summary>
+      /// Create IFCSystem from cached items
+      /// </summary>
+      /// <param name="exporterIFC">The IFC exporter object.</param>
+      /// <param name="doc">The document to export.</param>
+      /// <param name="file">The IFC file.</param>
+      /// <param name="systemsCache">The systems to export.</param>
+      /// <param name="ownerHistory">The owner history.</param>
+      /// <param name="buildingHandle">The building handle.</param>
+      /// <param name="projectHasBuilding">Is building exist.</param>
+      /// <param name="isElectricalSystem"> Is system electrical.</param>
+      private bool ExportCachedSystem(ExporterIFC exporterIFC, Document doc, IFCFile file, IDictionary<ElementId, ISet<IFCAnyHandle>> systemsCache,
+         IFCAnyHandle ownerHistory, IFCAnyHandle buildingHandle, bool projectHasBuilding, bool isElectricalSystem)
+      {
+         bool res = false;
+         foreach (KeyValuePair<ElementId, ISet<IFCAnyHandle>> system in systemsCache)
+         {
+            using (ProductWrapper productWrapper = ProductWrapper.Create(exporterIFC, true))
+            {
+               MEPSystem systemElem = doc.GetElement(system.Key) as MEPSystem;
+               if (systemElem == null)
+                  continue;
+
+               Element baseEquipment = systemElem.BaseEquipment;
+               if (baseEquipment != null)
+               {
+                  IFCAnyHandle memberHandle = ExporterCacheManager.MEPCache.Find(baseEquipment.Id);
+                  if (!IFCAnyHandleUtil.IsNullOrHasNoValue(memberHandle))
+                     system.Value.Add(memberHandle);
+               }
+
+               if (isElectricalSystem)
+               {
+                  // The Elements property below can throw an InvalidOperationException in some cases, which could
+                  // crash the export.  Protect against this without having too generic a try/catch block.
+                  try
+                  {
+                     ElementSet members = systemElem.Elements;
+                     foreach (Element member in members)
+                     {
+                        IFCAnyHandle memberHandle = ExporterCacheManager.MEPCache.Find(member.Id);
+                        if (!IFCAnyHandleUtil.IsNullOrHasNoValue(memberHandle))
+                           system.Value.Add(memberHandle);
+                     }
+                  }
+                  catch
+                  {
+                  }
+               }
+
+               if (system.Value.Count == 0)
+                  continue;
+
+               ElementType systemElemType = doc.GetElement(systemElem.GetTypeId()) as ElementType;
+               string name = NamingUtil.GetNameOverride(systemElem, systemElem.Name);
+               string desc = NamingUtil.GetDescriptionOverride(systemElem, null);
+               string objectType = NamingUtil.GetObjectTypeOverride(systemElem,
+                   (systemElemType != null) ? systemElemType.Name : "");
+
+               string systemGUID = GUIDUtil.CreateGUID(systemElem);
+               IFCAnyHandle systemHandle = null;
+               if (ExporterCacheManager.ExportOptionsCache.ExportAsOlderThanIFC4)
+               {
+                  systemHandle = IFCInstanceExporter.CreateSystem(file, systemGUID,
+                     ownerHistory, name, desc, objectType);
+               }
+               else
+               {
+                  string longName = NamingUtil.GetLongNameOverride(systemElem, null);
+                  Toolkit.IFC4.IFCDistributionSystem systemType = ConnectorExporter.GetMappedIFCDistributionSystemFromElement(systemElem);
+                  string predefinedType = IFCValidateEntry.ValidateStrEnum<Toolkit.IFC4.IFCDistributionSystem>(systemType.ToString());
+
+                  systemHandle = IFCInstanceExporter.CreateDistributionSystem(file, systemGUID,
+                     ownerHistory, name, desc, objectType, longName, predefinedType);
+               }
+
+               if (systemHandle == null)
+                  continue;
+               res = true;
+
+               // Create classification reference when System has classification filed name assigned to it
+               ClassificationUtil.CreateClassification(exporterIFC, file, systemElem, systemHandle);
+
+               productWrapper.AddSystem(systemElem, systemHandle);
+
+               if (projectHasBuilding)
+               {
+                  CreateRelServicesBuildings(buildingHandle, file, ownerHistory, systemHandle);
+               }
+
+               IFCObjectType? objType = null;
+               if (!ExporterCacheManager.ExportOptionsCache.ExportAsCoordinationView2 && ExporterCacheManager.ExportOptionsCache.ExportAsOlderThanIFC4)
+                  objType = IFCObjectType.Product;
+               IFCAnyHandle relAssignsToGroup = IFCInstanceExporter.CreateRelAssignsToGroup(file, GUIDUtil.CreateGUID(),
+                   ownerHistory, null, null, system.Value, objType, systemHandle);
+
+               ExporterUtil.ExportRelatedProperties(exporterIFC, systemElem, productWrapper);
+            }
+         }
+         return res;
+      }
+
    }
 }
