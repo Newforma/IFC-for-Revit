@@ -372,6 +372,12 @@
       <Version>12.0.3</Version>
     </PackageReference>
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="IFC2X2_ADD1.exp" />
+    <Content Include="IFC2X3_TC1.exp" />
+    <Content Include="IFC4.exp" />
+    <Content Include="IFCCertifiedEntitiesAndPSets.json" />
+  </ItemGroup>
   <!--
     Always Import the appropriate *.OutputPath.targets file BEFORE the
     Revit.CSharp.targets file, otherwise VisualStudio will complain
