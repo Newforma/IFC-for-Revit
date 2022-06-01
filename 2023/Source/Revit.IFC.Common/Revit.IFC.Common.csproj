@@ -38,15 +38,17 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <Prefer32Bit>false</Prefer32Bit>
-    <DefineConstants>TRACE;DEBUG;IFC_OPENSOURCE</DefineConstants>
+    <PlatformTarget>x64</PlatformTarget>
     <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;IFC_OPENSOURCE</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
     <Prefer32Bit>false</Prefer32Bit>
-    <DefineConstants>TRACE;IFC_OPENSOURCE</DefineConstants>
     <OutputPath>bin\Release\</OutputPath>
+    <PlatformTarget>x64</PlatformTarget>
     <Optimize>true</Optimize>
     <WarningLevel>0</WarningLevel>
+    <DefineConstants>TRACE;IFC_OPENSOURCE</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -108,7 +110,6 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="BIMOne.Revit2023.IFC.Common.nuspec" />
     <Content Include="IFC2X2_ADD1.xsd" />
     <Content Include="IFC2X3_TC1.xsd" />
     <Content Include="IFC4.xsd" />
