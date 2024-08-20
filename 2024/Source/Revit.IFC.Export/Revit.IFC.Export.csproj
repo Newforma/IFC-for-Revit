@@ -40,16 +40,15 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <Prefer32Bit>false</Prefer32Bit>
-    <PlatformTarget>x64</PlatformTarget>
-    <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>TRACE;DEBUG;IFC_OPENSOURCE</DefineConstants>
+    <PlatformTarget>x64</PlatformTarget>
+    <OutputPath>bin\Debugx64\</OutputPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
     <Prefer32Bit>false</Prefer32Bit>
-    <OutputPath>bin\Release\</OutputPath>
-    <PlatformTarget>x64</PlatformTarget>
     <DefineConstants>TRACE;IFC_OPENSOURCE</DefineConstants>
-    <Optimize>true</Optimize>
+    <OutputPath>bin\Releasex64\</OutputPath>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -73,11 +72,11 @@
     <Compile Include="Exporter\ExporterInitializer_PredefPset.cs" />
     <Compile Include="Exporter\ExporterInitializer_PsetDef.cs" />
     <Compile Include="Exporter\ExporterInitializer_QsetDef.cs" />
-    <Compile Include="Exporter\GenericElementExporter.cs" />
     <Compile Include="Exporter\ExtrusionExporter.cs" />
     <Compile Include="Exporter\FabricSheetExporter.cs" />
     <Compile Include="Exporter\FilledRegionExporter.cs" />
     <Compile Include="Exporter\FootingExporter.cs" />
+    <Compile Include="Exporter\GenericElementExporter.cs" />
     <Compile Include="Exporter\GenericMEPExporter.cs" />
     <Compile Include="Exporter\GridExporter.cs" />
     <Compile Include="Exporter\GroupExporter.cs" />
@@ -86,6 +85,7 @@
     <Compile Include="Exporter\HostedSweepExporter.cs" />
     <Compile Include="Exporter\HostObjectExporter.cs" />
     <Compile Include="Exporter\IFCEntityAndPsetList.cs" />
+    <Compile Include="Exporter\IFCExportBodyParams.cs" />
     <Compile Include="Exporter\InsulationExporter.cs" />
     <Compile Include="Exporter\PartExporter.cs" />
     <Compile Include="Exporter\PileExporter.cs" />
@@ -93,20 +93,25 @@
     <Compile Include="Exporter\PropertySet\AttributeEntry.cs" />
     <Compile Include="Exporter\PropertySet\AttributeEntryMap.cs" />
     <Compile Include="Exporter\PropertySet\AttributeSetDescription.cs" />
-    <Compile Include="Exporter\PropertySet\Calculators\ConcealedCalculator.cs" />
-    <Compile Include="Exporter\PropertySet\Calculators\ConcealedCeiling.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\ConcealedCeilingOffset.cs" />
-    <Compile Include="Exporter\PropertySet\Calculators\ConcealedFlooring.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\ConcealedFlooringOffset.cs" />
+    <Compile Include="Exporter\PropertySet\Calculators\ConcealedCeiling.cs" />
+    <Compile Include="Exporter\PropertySet\Calculators\ConcealedFlooring.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\FireRatingCalculator.cs" />
+    <Compile Include="Exporter\PropertySet\Calculators\GrossCeilingAreaCalculator.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\GrossCrossSectionAreaCalculator.cs" />
+    <Compile Include="Exporter\PropertySet\Calculators\GrossFloorAreaCalculator.cs" />
+    <Compile Include="Exporter\PropertySet\Calculators\GrossSideAreaCalculator.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\IsExternalCalculator.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\ISOCD3766ShapeParameterRCalculator.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\LongitudinalBarNominalDiameter.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\LongitudinalBarSpacing.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\MeshLengthCalculator.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\MeshWidthCalculator.cs" />
+    <Compile Include="Exporter\PropertySet\Calculators\NetAreaCalculator.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\NetCrossSectionAreaCalculator.cs" />
+    <Compile Include="Exporter\PropertySet\Calculators\NetFloorAreaCalculator.cs" />
+    <Compile Include="Exporter\PropertySet\Calculators\NetSideAreaCalculator.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\NosingLengthCalculator.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\NumberOfRiserCalculator.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\NumberOfTreadsCalculator.cs" />
@@ -142,6 +147,7 @@
     <Compile Include="Exporter\PropertySet\Calculators\NumberOfStoreysCalculator.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\HeightCalculator.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\ProjectedAreaCalculator.cs" />
+    <Compile Include="Exporter\PropertySet\Calculators\ConcealedCalculator.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\TemperatureCalculator.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\SpecificZoneCalculator.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\TransverseBarNominalDiameter.cs" />
@@ -158,8 +164,12 @@
     <Compile Include="Exporter\PropertySet\ExporterInitializer_PsetDefIFC2X2Enum.cs" />
     <Compile Include="Exporter\PropertySet\ExporterInitializer_PsetDefIFC2X3Enum.cs" />
     <Compile Include="Exporter\PropertySet\ExporterInitializer_PsetDefIFC4Enum.cs" />
+    <Compile Include="Exporter\PropertySet\ExporterInitializer_PsetDefIFC4X3Enum.cs" />
     <Compile Include="Exporter\PropertySet\FrequencyPropertyUtil.cs" />
     <Compile Include="Exporter\PropertySet\PositivePlaneAnglePropertyUtil.cs" />
+    <Compile Include="Exporter\PropertySet\PreDefinedPropertySetDescription.cs" />
+    <Compile Include="Exporter\PropertySet\PreDefinedPropertySetEntry.cs" />
+    <Compile Include="Exporter\PropertySet\PreDefinedPropertySetEntryMap.cs" />
     <Compile Include="Exporter\PropertySet\PropertySetDescription.cs" />
     <Compile Include="Exporter\PropertySet\PropertySetEntry.cs" />
     <Compile Include="Exporter\PropertySet\PropertySetEntryMap.cs" />
@@ -201,6 +211,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="Toolkit\IFC4x3Enums.cs" />
     <Compile Include="Toolkit\IFCValidateEntry.cs" />
     <Compile Include="Toolkit\IFC4Enums.cs" />
     <Compile Include="Toolkit\IFCEnums.cs" />
@@ -215,10 +226,14 @@
     <Compile Include="Utility\BaseRelationsCache.cs" />
     <Compile Include="Utility\BooleanPropertyInfoCache.cs" />
     <Compile Include="Utility\CategoryUtil.cs" />
+    <Compile Include="Utility\ElementOrConnector.cs" />
+    <Compile Include="Utility\FabricParams.cs" />
+    <Compile Include="Utility\LinkedFileExportAs.cs" />
+    <Compile Include="Utility\MaterialConstituentCache.cs" />
+    <Compile Include="Utility\MaterialLayerSetInfo.cs" />
     <Compile Include="Utility\ClassificationLocationCache.cs" />
     <Compile Include="Utility\ClassificationCache.cs" />
     <Compile Include="Utility\ContainmentCache.cs" />
-    <Compile Include="Utility\ClassificationReferenceCache.cs" />
     <Compile Include="Utility\CurveAnnotationCache.cs" />
     <Compile Include="Exporter\FamilyInstanceExporter.cs" />
     <Compile Include="Exporter\PropertySet\Description.cs" />
@@ -238,14 +253,12 @@
     <Compile Include="Utility\DoublePropertyInfoCache.cs" />
     <Compile Include="Utility\DummyHostCache.cs" />
     <Compile Include="Utility\ElementFilteringUtil.cs" />
-    <Compile Include="Utility\ElementOrConnector.cs" />
     <Compile Include="Utility\ElementToHandleCache.cs" />
     <Compile Include="Utility\ElementTypeToHandleCache.cs" />
     <Compile Include="Utility\ExporterCacheManager.cs" />
     <Compile Include="Utility\ExporterStateManager.cs" />
     <Compile Include="Utility\ExporterUtil.cs" />
     <Compile Include="Utility\ExportOptionsCache.cs" />
-    <Compile Include="Utility\FabricParams.cs" />
     <Compile Include="Utility\FamilyExporterUtil.cs" />
     <Compile Include="Utility\FamilyTypeInfo.cs" />
     <Compile Include="Utility\FootPrintInfo.cs" />
@@ -261,9 +274,8 @@
     <Compile Include="Utility\LevelUtil.cs" />
     <Compile Include="Utility\LogicalPropertyInfoCache.cs" />
     <Compile Include="Utility\MaterialAndProfile.cs" />
-    <Compile Include="Utility\MaterialConstituentCache.cs" />
     <Compile Include="Utility\MaterialConstituentSetCache.cs" />
-    <Compile Include="Utility\MaterialLayerSetInfo.cs" />
+    <Compile Include="Utility\MaterialPropertiesUtil.cs" />
     <Compile Include="Utility\MaterialSetUsageCache.cs" />
     <Compile Include="Utility\MEPCache.cs" />
     <Compile Include="Utility\NamingOptions.cs" />
@@ -280,6 +292,7 @@
     <Compile Include="Utility\ProductWrapper.cs" />
     <Compile Include="Utility\PropertyInfoCache.cs" />
     <Compile Include="Utility\PropertyMap.cs" />
+    <Compile Include="Utility\PropertySetCache.cs" />
     <Compile Include="Utility\PropertySetOptions.cs" />
     <Compile Include="Utility\RepresentationUtil.cs" />
     <Compile Include="Utility\SimpleSweptSolidAnalyzer.cs" />
@@ -366,17 +379,11 @@
       <Version>24.0.5.432</Version>
     </PackageReference>
     <PackageReference Include="GeometryGymIFC">
-      <Version>0.0.20</Version>
+      <Version>0.1.22</Version>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json">
       <Version>12.0.3</Version>
     </PackageReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="IFC2X2_ADD1.exp" />
-    <Content Include="IFC2X3_TC1.exp" />
-    <Content Include="IFC4.exp" />
-    <Content Include="IFCCertifiedEntitiesAndPSets.json" />
   </ItemGroup>
   <!--
     Always Import the appropriate *.OutputPath.targets file BEFORE the
