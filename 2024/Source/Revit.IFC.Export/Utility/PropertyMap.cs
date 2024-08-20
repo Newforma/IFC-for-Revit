@@ -182,7 +182,7 @@ namespace Revit.IFC.Export.Utility
                {
                   string line;
 
-                  DatabaseIfc db = new DatabaseIfc(false, ReleaseVersion.IFC4);
+                  DatabaseIfc db = new DatabaseIfc(ReleaseVersion.IFC4A2);
                   IfcPropertySetTemplate userDefinedPset = null;
                   while ((line = sr.ReadLine()) != null)
                   {
@@ -229,8 +229,35 @@ namespace Revit.IFC.Export.Utility
                               {
                                  new IfcRelAssociatesClassification(new IfcClassificationReference(db) { Identification = split[2] }, propertyDefUnit);
                               }
-                              if(!string.IsNullOrEmpty(split[1]))
-                                 propertyDefUnit.PrimaryMeasureType = "Ifc" + split[1];
+                              if (!string.IsNullOrEmpty(split[1]))
+                              {
+                                 string[] propertyTypeVals = split[1].Split(new char[] {'.'}, StringSplitOptions.RemoveEmptyEntries);
+                                 if (propertyTypeVals.Count() > 1)
+                                 {
+                                    switch (propertyTypeVals[0])
+                                    {
+                                       case "PropertyListValue":
+                                          propertyDefUnit.TemplateType = IfcSimplePropertyTemplateTypeEnum.P_LISTVALUE;
+                                          break;
+                                       case "PropertyBoundedValue":
+                                          propertyDefUnit.TemplateType = IfcSimplePropertyTemplateTypeEnum.P_BOUNDEDVALUE;
+                                          break;
+                                       case "PropertyTableValue":
+                                          propertyDefUnit.TemplateType = IfcSimplePropertyTemplateTypeEnum.P_TABLEVALUE;
+                                          break;
+                                       default:
+                                          propertyDefUnit.TemplateType = IfcSimplePropertyTemplateTypeEnum.P_SINGLEVALUE;
+                                          break;
+                                    }
+                                    
+                                    string[] measureTypes = propertyTypeVals[1].Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+                                    propertyDefUnit.PrimaryMeasureType = "Ifc" + measureTypes[0];
+                                    if (measureTypes.Count() == 2)
+                                       propertyDefUnit.SecondaryMeasureType = "Ifc" + measureTypes[1];
+                                 }
+                                 else
+                                    propertyDefUnit.PrimaryMeasureType = "Ifc" + propertyTypeVals[0];
+                              }
                            }
                         }
                      }
