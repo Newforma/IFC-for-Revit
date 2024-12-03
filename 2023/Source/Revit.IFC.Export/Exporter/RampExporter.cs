@@ -132,7 +132,7 @@ namespace Revit.IFC.Export.Exporter
       /// <param name="placementSetter">The placement setter.</param>
       /// <param name="productWrapper">The ProductWrapper.</param>
       public static void ExportMultistoryRamp(ExporterIFC exporterIFC, Element ramp, int numFlights,
-          IFCAnyHandle rampHnd, IList<IFCAnyHandle> components, IList<IFCExtrusionCreationData> componentECData,
+          IFCAnyHandle rampHnd, IList<IFCAnyHandle> components, IList<IFCExportBodyParams> componentECData,
           PlacementSetter placementSetter, ProductWrapper productWrapper)
       {
          if (numFlights < 2)
@@ -308,7 +308,8 @@ namespace Revit.IFC.Export.Exporter
             
             string containerRampName = 
                IFCAnyHandleUtil.GetStringAttribute(rampHnd, "Name") + ":" + (ii + 2);
-            string containerGuid = GUIDUtil.GenerateIFCGuidFrom(ramp, containerRampName);
+            string containerGuid = GUIDUtil.GenerateIFCGuidFrom(
+               GUIDUtil.CreateGUIDString(ramp, containerRampName));
             IFCAnyHandle rampCopyHnd = IFCInstanceExporter.CreateRamp(exporterIFC, ramp,
                containerGuid, ownerHistory, rampLocalPlacementHnds[ii], null, rampType);
 
@@ -360,17 +361,17 @@ namespace Revit.IFC.Export.Exporter
 
             using (PlacementSetter placementSetter = PlacementSetter.Create(exporterIFC, ramp, null, null, overrideContainerId, overrideContainerHnd))
             {
-               IFCAnyHandle contextOfItemsFootPrint = exporterIFC.Get3DContextHandle("FootPrint");
-               IFCAnyHandle contextOfItemsAxis = exporterIFC.Get3DContextHandle("Axis");
+               IFCAnyHandle contextOfItemsFootPrint = ExporterCacheManager.Get3DContextHandle(IFCRepresentationIdentifier.FootPrint);
+               IFCAnyHandle contextOfItemsAxis = ExporterCacheManager.Get3DContextHandle(IFCRepresentationIdentifier.Axis);
 
                Transform trf = ExporterIFCUtils.GetUnscaledTransform(exporterIFC, placementSetter.LocalPlacement);
                IFCAnyHandle ownerHistory = ExporterCacheManager.OwnerHistoryHandle;
 
                string predefType = ifcEnumType;
                IFCExportInfoPair exportTypePair = ExporterUtil.GetProductExportType(exporterIFC, ramp, out ifcEnumType);
-               if (!string.IsNullOrEmpty(exportTypePair.ValidatedPredefinedType))
+               if (!exportTypePair.IsPredefinedTypeDefault)
                {
-                  predefType = exportTypePair.ValidatedPredefinedType;
+                  predefType = exportTypePair.PredefinedType;
                }
 
                SortedDictionary<double,IList<(Solid body, Face largestTopFace)>> rampFlights = null;
@@ -387,7 +388,7 @@ namespace Revit.IFC.Export.Exporter
                   IFCAnyHandle rampContainerHnd = IFCInstanceExporter.CreateGenericIFCEntity(exportType, exporterIFC, ramp, rampGUID, ownerHistory,
                      rampLocalPlacement, null);
 
-                  IFCAnyHandle rampTypeHnd = ExporterUtil.CreateGenericTypeFromElement(ramp, exportType, exporterIFC.GetFile(), ownerHistory, predefType, productWrapper);
+                  IFCAnyHandle rampTypeHnd = ExporterUtil.CreateGenericTypeFromElement(ramp, exportType, exporterIFC.GetFile(), productWrapper);
                   ExporterCacheManager.TypeRelationsCache.Add(rampTypeHnd, rampContainerHnd);
                   productWrapper.AddElement(ramp, rampContainerHnd, placementSetter.LevelInfo, null, true, exportType);
 
@@ -399,7 +400,7 @@ namespace Revit.IFC.Export.Exporter
                   {
                      foreach ((Solid body, Face topFace) flightItem in rampFlight.Value)
                      {
-                        using (IFCExtrusionCreationData ecData = new IFCExtrusionCreationData())
+                        using (IFCExportBodyParams ecData = new IFCExportBodyParams())
                         {
                            ecData.AllowVerticalOffsetOfBReps = false;
                            ecData.SetLocalPlacement(ExporterUtil.CreateLocalPlacement(file, placementSetter.LocalPlacement, null));
@@ -476,7 +477,7 @@ namespace Revit.IFC.Export.Exporter
                   {
                      foreach ((Solid body, Face topFace) landingItem in landing.Value)
                      {
-                        using (IFCExtrusionCreationData ecData = new IFCExtrusionCreationData())
+                        using (IFCExportBodyParams ecData = new IFCExportBodyParams())
                         {
                            ecData.AllowVerticalOffsetOfBReps = false;
                            ecData.SetLocalPlacement(ExporterUtil.CreateLocalPlacement(file, placementSetter.LocalPlacement, null));
@@ -541,13 +542,14 @@ namespace Revit.IFC.Export.Exporter
 
                   if (rampComponents.Count > 0)
                   {
-                     string relGuid = GUIDUtil.GenerateIFCGuidFrom(IFCEntityType.IfcRelAggregates, rampContainerHnd);
+                     string relGuid = GUIDUtil.GenerateIFCGuidFrom(
+                        GUIDUtil.CreateGUIDString(IFCEntityType.IfcRelAggregates, rampContainerHnd));
                      IFCInstanceExporter.CreateRelAggregates(file, relGuid, ownerHistory, null, null, rampContainerHnd, rampComponents);
                   }
                }
                else
                {
-                  using (IFCExtrusionCreationData ecData = new IFCExtrusionCreationData())
+                  using (IFCExportBodyParams ecData = new IFCExportBodyParams())
                   {
                      ecData.SetLocalPlacement(placementSetter.LocalPlacement);
                      ecData.ReuseLocalPlacement = false;
@@ -559,7 +561,7 @@ namespace Revit.IFC.Export.Exporter
 
                      BodyExporterOptions bodyExporterOptions = new BodyExporterOptions(true, ExportOptionsCache.ExportTessellationLevel.ExtraLow);
                      IFCAnyHandle representation = RepresentationUtil.CreateAppropriateProductDefinitionShape(exporterIFC,
-                         ramp, categoryId, rampGeom, bodyExporterOptions, null, ecData, out bodyData);
+                         ramp, categoryId, rampGeom, bodyExporterOptions, null, ecData, out bodyData, instanceGeometry: true);
 
                      if (IFCAnyHandleUtil.IsNullOrHasNoValue(representation))
                      {
@@ -577,7 +579,7 @@ namespace Revit.IFC.Export.Exporter
                         IFCAnyHandle localPlacement = ecData.GetLocalPlacement();
 
                         IFCAnyHandle rampHnd = IFCInstanceExporter.CreateRamp(exporterIFC, ramp, guid, ownerHistory,
-                              localPlacement, representation, exportTypePair.ValidatedPredefinedType);
+                              localPlacement, representation, exportTypePair.GetPredefinedTypeOrDefault());
                         productWrapper.AddElement(ramp, rampHnd, placementSetter.LevelInfo, ecData, true, exportTypePair);
                         CategoryUtil.CreateMaterialAssociation(exporterIFC, rampHnd, bodyData.MaterialIds);
 
@@ -589,9 +591,9 @@ namespace Revit.IFC.Export.Exporter
                      else
                      {
                         List<IFCAnyHandle> components = new List<IFCAnyHandle>();
-                        IList<IFCExtrusionCreationData> componentExtrusionData = new List<IFCExtrusionCreationData>();
+                        IList<IFCExportBodyParams> componentExtrusionData = new List<IFCExportBodyParams>();
                         IFCAnyHandle containedRampHnd = IFCInstanceExporter.CreateRamp(exporterIFC, ramp, containedRampGuid, ownerHistory,
-                                  containedRampLocalPlacement, representation, exportTypePair.ValidatedPredefinedType);
+                                  containedRampLocalPlacement, representation, exportTypePair.GetPredefinedTypeOrDefault());
                         components.Add(containedRampHnd);
                         componentExtrusionData.Add(ecData);
                         //productWrapper.AddElement(containedRampHnd, placementSetter.LevelInfo, ecData, false);
@@ -601,7 +603,7 @@ namespace Revit.IFC.Export.Exporter
                         IFCAnyHandle localPlacement = ecData.GetLocalPlacement();
 
                         IFCAnyHandle rampHnd = IFCInstanceExporter.CreateRamp(exporterIFC, ramp, guid, ownerHistory,
-                                  localPlacement, null, exportTypePair.ValidatedPredefinedType);
+                                  localPlacement, null, exportTypePair.GetPredefinedTypeOrDefault());
                         productWrapper.AddElement(ramp, rampHnd, placementSetter.LevelInfo, ecData, true, exportTypePair);
 
                         string typeGuid = GUIDUtil.CreateGUID(rampType);
@@ -631,19 +633,19 @@ namespace Revit.IFC.Export.Exporter
       /// <param name="productWrapper">The ProductWrapper.</param>
       public static void Export(ExporterIFC exporterIFC, Element element, GeometryElement geometryElement, ProductWrapper productWrapper)
       {
-         string ifcEnumType = ExporterUtil.GetIFCTypeFromExportTable(exporterIFC, element);
+         IFCExportInfoPair exportType = ExporterUtil.GetProductExportType(exporterIFC, element, out _);
          IFCFile file = exporterIFC.GetFile();
 
          using (IFCTransaction tr = new IFCTransaction(file))
          {
-            StairsExporter.ExportLegacyStairOrRampAsContainer(exporterIFC, ifcEnumType, element, geometryElement, productWrapper);
+            StairsExporter.ExportLegacyStairOrRampAsContainer(exporterIFC, exportType.GetPredefinedTypeOrDefault(), element, geometryElement, productWrapper);
 
             // If we didn't create a handle here, then the element wasn't a "native" Ramp, and is likely a FamilyInstance or a DirectShape.
             if (IFCAnyHandleUtil.IsNullOrHasNoValue(productWrapper.GetAnElement()))
             {
                int numFlights = GetNumFlightsForRamp(exporterIFC, element);
                if (numFlights > 0)
-                  ExportRamp(exporterIFC, ifcEnumType, element, geometryElement, numFlights, productWrapper);
+                  ExportRamp(exporterIFC, exportType.PredefinedType, element, geometryElement, numFlights, productWrapper);
             }
 
             tr.Commit();
@@ -713,7 +715,7 @@ namespace Revit.IFC.Export.Exporter
       {
          // For IFC4 and Structural Exchange Requirement export, ramps will be exported as IFCSlab type
          if (ExporterCacheManager.ExportOptionsCache.ExportAs4 && 
-            (ExporterCacheManager.ExportOptionsCache.GetExchangeRequirement == KnownERNames.Structural))
+            (ExporterCacheManager.ExportOptionsCache.ExchangeRequirement == KnownERNames.Structural))
          {
             entityName = IFCEntityType.IfcSlab;
             entityType = IFCEntityType.IfcSlabType;
@@ -745,8 +747,8 @@ namespace Revit.IFC.Export.Exporter
 
          // The property set for components is determined by index in the parameter name, but if it does not exist, it will check a common one without index 
          double doubleParamOverride = 0.0;
-         if (ParameterUtil.GetDoubleValueFromElement(element, null, "Pset_RampFlightCommon.Slope (" + flightIndex.ToString() + ")", out doubleParamOverride) != null
-            || ParameterUtil.GetDoubleValueFromElement(element, null, "Pset_RampFlightCommon.Slope", out doubleParamOverride) != null)
+         if (ParameterUtil.GetDoubleValueFromElement(element, "Pset_RampFlightCommon.Slope (" + flightIndex.ToString() + ")", out doubleParamOverride) != null
+            || ParameterUtil.GetDoubleValueFromElement(element, "Pset_RampFlightCommon.Slope", out doubleParamOverride) != null)
          {
             slope = doubleParamOverride;
          }
@@ -781,8 +783,8 @@ namespace Revit.IFC.Export.Exporter
             double doubleParam = 0.0;
             if (!MathUtil.IsAlmostZero(slope))
                doubleParam = UnitUtil.ScaleAngle(Math.PI / 2.0) - slope;
-            if (ParameterUtil.GetDoubleValueFromElement(element, null, "Pset_RampFlightCommon.CounterSlope (" + flightIndex.ToString() + ")", out doubleParamOverride) != null
-               || ParameterUtil.GetDoubleValueFromElement(element, null, "Pset_RampFlightCommon.CounterSlope", out doubleParamOverride) != null)
+            if (ParameterUtil.GetDoubleValueFromElement(element, "Pset_RampFlightCommon.CounterSlope (" + flightIndex.ToString() + ")", out doubleParamOverride) != null
+               || ParameterUtil.GetDoubleValueFromElement(element, "Pset_RampFlightCommon.CounterSlope", out doubleParamOverride) != null)
             {
                doubleParam = doubleParamOverride;
             }
@@ -797,8 +799,8 @@ namespace Revit.IFC.Export.Exporter
 
          if (properties.Count > 0)
          {
-            string guid = GUIDUtil.GenerateIFCGuidFrom(element, 
-               paramSetName + ": " + flightIndex.ToString());
+            string guid = GUIDUtil.GenerateIFCGuidFrom(
+               GUIDUtil.CreateGUIDString(element, paramSetName + ": " + flightIndex.ToString()));
             return IFCInstanceExporter.CreatePropertySet(file,
                guid, ExporterCacheManager.OwnerHistoryHandle, paramSetName, null, properties);
          }
@@ -823,8 +825,8 @@ namespace Revit.IFC.Export.Exporter
          HashSet<IFCAnyHandle> properties, string psetName, string propertyName, int index,
          Func<double, double> scalar, Func<double, IFCData> dataFn)
       {
-         if (ParameterUtil.GetDoubleValueFromElement(element, null, psetName + "." + propertyName + " (" + index.ToString() + ")", out double doubleParam) == null)
-            ParameterUtil.GetDoubleValueFromElement(element, null, psetName + "." + propertyName, out doubleParam);
+         if (ParameterUtil.GetDoubleValueFromElement(element, psetName + "." + propertyName + " (" + index.ToString() + ")", out double doubleParam) == null)
+            ParameterUtil.GetDoubleValueFromElement(element, psetName + "." + propertyName, out doubleParam);
          {
             if (scalar != null)
                doubleParam = scalar(doubleParam);
@@ -896,8 +898,9 @@ namespace Revit.IFC.Export.Exporter
 
          if (properties.Count > 0)
          {
-            string guid = GUIDUtil.GenerateIFCGuidFrom(element, 
-               "Landing " + psetName + ": " + landingIndex.ToString());
+            string guid = GUIDUtil.GenerateIFCGuidFrom(
+               GUIDUtil.CreateGUIDString(element, 
+               "Landing " + psetName + ": " + landingIndex.ToString()));
             return IFCInstanceExporter.CreatePropertySet(file, guid,
                ExporterCacheManager.OwnerHistoryHandle, psetName, null, properties);
          }
@@ -926,8 +929,8 @@ namespace Revit.IFC.Export.Exporter
 
          // For the rest of quantities, we cannot determine the quantities for freeform RampFlight and therefore it will rely on parameters
          double doubleParam = 0.0;
-         if (ParameterUtil.GetDoubleValueFromElement(element, null, "IfcRampFlight.IfcQtyLength (" + flightIndex.ToString() + ")", out doubleParam) != null
-            || ParameterUtil.GetDoubleValueFromElement(element, null, "IfcRampFlight.IfcQtyLength", out doubleParam) != null)
+         if (ParameterUtil.GetDoubleValueFromElement(element, "IfcRampFlight.IfcQtyLength (" + flightIndex.ToString() + ")", out doubleParam) != null
+            || ParameterUtil.GetDoubleValueFromElement(element, "IfcRampFlight.IfcQtyLength", out doubleParam) != null)
          {
             doubleParam = UnitUtil.ScaleLength(doubleParam);
             IFCAnyHandle quantityHnd = IFCInstanceExporter.CreateQuantityLength(file, "Length", null, null, doubleParam);
@@ -935,8 +938,8 @@ namespace Revit.IFC.Export.Exporter
          }
 
          doubleParam = 0.0;
-         if (ParameterUtil.GetDoubleValueFromElement(element, null, "IfcRampFlight.IfcQtyWidth (" + flightIndex.ToString() + ")", out doubleParam) != null
-            || ParameterUtil.GetDoubleValueFromElement(element, null, "IfcRampFlight.IfcQtyWidth", out doubleParam) != null)
+         if (ParameterUtil.GetDoubleValueFromElement(element, "IfcRampFlight.IfcQtyWidth (" + flightIndex.ToString() + ")", out doubleParam) != null
+            || ParameterUtil.GetDoubleValueFromElement(element, "IfcRampFlight.IfcQtyWidth", out doubleParam) != null)
          {
             doubleParam = UnitUtil.ScaleLength(doubleParam);
             IFCAnyHandle quantityHnd = IFCInstanceExporter.CreateQuantityLength(file, "Width", null, null, doubleParam);
@@ -944,8 +947,8 @@ namespace Revit.IFC.Export.Exporter
          }
 
          doubleParam = 0.0;
-         if (ParameterUtil.GetDoubleValueFromElement(element, null, "IfcRampFlight.IfcQtyGrossArea (" + flightIndex.ToString() + ")", out doubleParam) != null
-            || ParameterUtil.GetDoubleValueFromElement(element, null, "IfcRampFlight.IfcQtyGrossArea", out doubleParam) != null)
+         if (ParameterUtil.GetDoubleValueFromElement(element, "IfcRampFlight.IfcQtyGrossArea (" + flightIndex.ToString() + ")", out doubleParam) != null
+            || ParameterUtil.GetDoubleValueFromElement(element, "IfcRampFlight.IfcQtyGrossArea", out doubleParam) != null)
          {
             doubleParam = UnitUtil.ScaleArea(doubleParam);
             IFCAnyHandle quantityHnd = IFCInstanceExporter.CreateQuantityLength(file, "GrossArea", null, null, doubleParam);
@@ -953,8 +956,8 @@ namespace Revit.IFC.Export.Exporter
          }
 
          doubleParam = 0.0;
-         if (ParameterUtil.GetDoubleValueFromElement(element, null, "IfcRampFlight.IfcQtyGrossVolume (" + flightIndex.ToString() + ")", out doubleParam) != null
-            || ParameterUtil.GetDoubleValueFromElement(element, null, "IfcRampFlight.IfcQtyGrossVolume", out doubleParam) != null)
+         if (ParameterUtil.GetDoubleValueFromElement(element, "IfcRampFlight.IfcQtyGrossVolume (" + flightIndex.ToString() + ")", out doubleParam) != null
+            || ParameterUtil.GetDoubleValueFromElement(element, "IfcRampFlight.IfcQtyGrossVolume", out doubleParam) != null)
          {
             doubleParam = UnitUtil.ScaleVolume(doubleParam);
             IFCAnyHandle quantityHnd = IFCInstanceExporter.CreateQuantityLength(file, "GrossVolume", null, null, doubleParam);
@@ -1000,8 +1003,8 @@ namespace Revit.IFC.Export.Exporter
 
          // For the rest of quantities, we cannot determine the quantities for freeform Landing and therefore it will rely on parameters
          double doubleParam = 0.0;
-         if (ParameterUtil.GetDoubleValueFromElement(element, null, "IfcRampLanding.IfcQtyLength (" + flightIndex.ToString() + ")", out doubleParam) != null
-            || ParameterUtil.GetDoubleValueFromElement(element, null, "IfcRampLanding.IfcQtyLength", out doubleParam) != null)
+         if (ParameterUtil.GetDoubleValueFromElement(element, "IfcRampLanding.IfcQtyLength (" + flightIndex.ToString() + ")", out doubleParam) != null
+            || ParameterUtil.GetDoubleValueFromElement(element, "IfcRampLanding.IfcQtyLength", out doubleParam) != null)
          {
             doubleParam = UnitUtil.ScaleLength(doubleParam);
             IFCAnyHandle quantityHnd = IFCInstanceExporter.CreateQuantityLength(file, "Length", null, null, doubleParam);
@@ -1009,8 +1012,8 @@ namespace Revit.IFC.Export.Exporter
          }
 
          doubleParam = 0.0;
-         if (ParameterUtil.GetDoubleValueFromElement(element, null, "IfcRampLanding.IfcQtyWidth (" + flightIndex.ToString() + ")", out doubleParam) != null
-            || ParameterUtil.GetDoubleValueFromElement(element, null, "IfcRampLanding.IfcQtyWidth", out doubleParam) != null)
+         if (ParameterUtil.GetDoubleValueFromElement(element, "IfcRampLanding.IfcQtyWidth (" + flightIndex.ToString() + ")", out doubleParam) != null
+            || ParameterUtil.GetDoubleValueFromElement(element, "IfcRampLanding.IfcQtyWidth", out doubleParam) != null)
          {
             doubleParam = UnitUtil.ScaleLength(doubleParam);
             IFCAnyHandle quantityHnd = IFCInstanceExporter.CreateQuantityLength(file, "Width", null, null, doubleParam);
@@ -1018,8 +1021,8 @@ namespace Revit.IFC.Export.Exporter
          }
 
          doubleParam = 0.0;
-         if (ParameterUtil.GetDoubleValueFromElement(element, null, "IfcRampLanding.IfcQtyDepth (" + flightIndex.ToString() + ")", out doubleParam) != null
-            || ParameterUtil.GetDoubleValueFromElement(element, null, "IfcRampLanding.IfcQtyDepth", out doubleParam) != null)
+         if (ParameterUtil.GetDoubleValueFromElement(element, "IfcRampLanding.IfcQtyDepth (" + flightIndex.ToString() + ")", out doubleParam) != null
+            || ParameterUtil.GetDoubleValueFromElement(element, "IfcRampLanding.IfcQtyDepth", out doubleParam) != null)
          {
             doubleParam = UnitUtil.ScaleLength(doubleParam);
             IFCAnyHandle quantityHnd = IFCInstanceExporter.CreateQuantityLength(file, "Depth", null, null, doubleParam);
@@ -1027,8 +1030,8 @@ namespace Revit.IFC.Export.Exporter
          }
 
          doubleParam = 0.0;
-         if (ParameterUtil.GetDoubleValueFromElement(element, null, "IfcRampLanding.IfcQtyGrossArea (" + flightIndex.ToString() + ")", out doubleParam) != null
-            || ParameterUtil.GetDoubleValueFromElement(element, null, "IfcRampLanding.IfcQtyGrossArea", out doubleParam) != null)
+         if (ParameterUtil.GetDoubleValueFromElement(element, "IfcRampLanding.IfcQtyGrossArea (" + flightIndex.ToString() + ")", out doubleParam) != null
+            || ParameterUtil.GetDoubleValueFromElement(element, "IfcRampLanding.IfcQtyGrossArea", out doubleParam) != null)
          {
             doubleParam = UnitUtil.ScaleArea(doubleParam);
             IFCAnyHandle quantityHnd = IFCInstanceExporter.CreateQuantityLength(file, "GrossArea", null, null, doubleParam);
@@ -1036,8 +1039,8 @@ namespace Revit.IFC.Export.Exporter
          }
 
          doubleParam = 0.0;
-         if (ParameterUtil.GetDoubleValueFromElement(element, null, "IfcRampLanding.IfcQtyGrossVolume (" + flightIndex.ToString() + ")", out doubleParam) != null
-            || ParameterUtil.GetDoubleValueFromElement(element, null, "IfcRampLanding.IfcQtyGrossVolume", out doubleParam) != null)
+         if (ParameterUtil.GetDoubleValueFromElement(element, "IfcRampLanding.IfcQtyGrossVolume (" + flightIndex.ToString() + ")", out doubleParam) != null
+            || ParameterUtil.GetDoubleValueFromElement(element, "IfcRampLanding.IfcQtyGrossVolume", out doubleParam) != null)
          {
             doubleParam = UnitUtil.ScaleVolume(doubleParam);
             IFCAnyHandle quantityHnd = IFCInstanceExporter.CreateQuantityLength(file, "GrossVolume", null, null, doubleParam);
@@ -1045,16 +1048,16 @@ namespace Revit.IFC.Export.Exporter
          }
 
          doubleParam = 0.0;
-         if (ParameterUtil.GetDoubleValueFromElement(element, null, "IfcRampLanding.IfcQtyGrossWeight (" + flightIndex.ToString() + ")", out doubleParam) != null
-            || ParameterUtil.GetDoubleValueFromElement(element, null, "IfcRampLanding.IfcQtyGrossWeight", out doubleParam) != null)
+         if (ParameterUtil.GetDoubleValueFromElement(element, "IfcRampLanding.IfcQtyGrossWeight (" + flightIndex.ToString() + ")", out doubleParam) != null
+            || ParameterUtil.GetDoubleValueFromElement(element, "IfcRampLanding.IfcQtyGrossWeight", out doubleParam) != null)
          {
             IFCAnyHandle quantityHnd = IFCInstanceExporter.CreateQuantityLength(file, "GrossWeight", null, null, doubleParam);
             quantityHnds.Add(quantityHnd);
          }
 
          doubleParam = 0.0;
-         if (ParameterUtil.GetDoubleValueFromElement(element, null, "IfcRampLanding.IfcQtyNetWeight (" + flightIndex.ToString() + ")", out doubleParam) != null
-            || ParameterUtil.GetDoubleValueFromElement(element, null, "IfcRampLanding.IfcQtyNetWeight", out doubleParam) != null)
+         if (ParameterUtil.GetDoubleValueFromElement(element, "IfcRampLanding.IfcQtyNetWeight (" + flightIndex.ToString() + ")", out doubleParam) != null
+            || ParameterUtil.GetDoubleValueFromElement(element, "IfcRampLanding.IfcQtyNetWeight", out doubleParam) != null)
          {
             IFCAnyHandle quantityHnd = IFCInstanceExporter.CreateQuantityLength(file, "NetWeight", null, null, doubleParam);
             quantityHnds.Add(quantityHnd);

@@ -32,7 +32,7 @@ namespace Revit.IFC.Export.Exporter
 
          // Check the intended IFC entity or type name is in the exclude list specified in the UI
          if (exportType.ExportInstance == IFCEntityType.UnKnown)
-            exportType.SetValueWithPair(IFCEntityType.IfcBuildingElementProxy, exportType.ValidatedPredefinedType);
+            exportType.SetByTypeAndPredefinedType(IFCEntityType.IfcBuildingElementProxy, exportType.PredefinedType);
          if (ExporterCacheManager.ExportOptionsCache.IsElementInExcludeList(exportType.ExportInstance))
             return null;
 
@@ -46,7 +46,7 @@ namespace Revit.IFC.Export.Exporter
          {
             using (PlacementSetter placementSetter = PlacementSetter.Create(exporterIFC, element, null, null, overrideContainerId, overrideContainerHnd))
             {
-               using (IFCExtrusionCreationData ecData = new IFCExtrusionCreationData())
+               using (IFCExportBodyParams ecData = new IFCExportBodyParams())
                {
                   ecData.SetLocalPlacement(placementSetter.LocalPlacement);
 
@@ -78,16 +78,13 @@ namespace Revit.IFC.Export.Exporter
                         HashSet<IFCAnyHandle> propertySetsOpt = new HashSet<IFCAnyHandle>();
                         IList<IFCAnyHandle> repMapListOpt = new List<IFCAnyHandle>();
 
-                        string typeGuid = FamilyExporterUtil.GetGUIDForFamilySymbol(element as FamilyInstance, familySymbol);
-                        styleHandle = FamilyExporterUtil.ExportGenericType(exporterIFC, exportType,
-                           exportType.ValidatedPredefinedType, propertySetsOpt, repMapListOpt,
-                           element, familySymbol, typeGuid);
+                        string typeGuid = FamilyExporterUtil.GetGUIDForFamilySymbol(element as FamilyInstance, familySymbol, exportType);
+                        styleHandle = FamilyExporterUtil.ExportGenericType(exporterIFC, exportType, propertySetsOpt, repMapListOpt, element, familySymbol, typeGuid);
                         productWrapper.RegisterHandleWithElementType(familySymbol, exportType, styleHandle, propertySetsOpt);
                      }
 
                      if (IFCAnyHandleUtil.IsNullOrHasNoValue(styleHandle))
-                        styleHandle = ExporterUtil.CreateGenericTypeFromElement(element, exportType, 
-                           file, ownerHistory, exportType.ValidatedPredefinedType, productWrapper);
+                        styleHandle = ExporterUtil.CreateGenericTypeFromElement(element, exportType, file, productWrapper);
                   }
 
                   if (!IFCAnyHandleUtil.IsNullOrHasNoValue(instanceHandle))
@@ -145,6 +142,9 @@ namespace Revit.IFC.Export.Exporter
          Element element, GeometryElement geomElem, IFCExportInfoPair exportType,
          ProductWrapper wrapper)
       {
+         if (geomElem == null)
+            return false;
+
          GeometryInstance geometryInstance = GetTheGeometryInstance(geomElem);
          if (geometryInstance == null)
             return false;
@@ -170,12 +170,18 @@ namespace Revit.IFC.Export.Exporter
          IList<Transform> repMapTrfList = new List<Transform>();
          BodyData bodyData = null;
          FamilyTypeInfo typeInfo = new FamilyTypeInfo();
-         IFCExtrusionCreationData extraParams = typeInfo.extraParams;
+         IFCExportBodyParams extraParams = typeInfo.extraParams;
 
          Transform offsetTransform = Transform.Identity;
 
          // We will create a new mapped type if we haven't already created the type.
-         FamilyTypeInfo currentTypeInfo = ExporterCacheManager.FamilySymbolToTypeInfoCache.Find(symbolId, false, exportType);
+         // GUID_TODO: This assumes that there are no types relating to objects split by level,
+         // or to doors/windows that are flipped.
+         var typeKey = new TypeObjectKey(symbolId, ElementId.InvalidElementId,
+            false, exportType, ElementId.InvalidElementId);
+
+         FamilyTypeInfo currentTypeInfo = 
+            ExporterCacheManager.FamilySymbolToTypeInfoCache.Find(typeKey);
          bool found = currentTypeInfo.IsValid();
          if (!found)
          {
@@ -210,8 +216,8 @@ namespace Revit.IFC.Export.Exporter
                extraParams.GetLocalPlacement());
 
             IFCAnyHandle typeStyle = FamilyInstanceExporter.CreateTypeEntityHandle(exporterIFC,
-               ref typeInfo, null, representations3D, repMapTrfList, null,
-               element, elementType, elementType, false, false,
+               typeKey, ref typeInfo, null, representations3D, repMapTrfList, null,
+               element, elementType, elementType, ElementId.InvalidElementId, false, false,
                exportType, out HashSet<IFCAnyHandle> propertySets);
 
             if (!IFCAnyHandleUtil.IsNullOrHasNoValue(typeStyle))
@@ -240,7 +246,7 @@ namespace Revit.IFC.Export.Exporter
          extraParams = typeInfo.extraParams;
 
          // We expect no openings, so always add to map.
-         ExporterCacheManager.FamilySymbolToTypeInfoCache.Register(symbolId, false, exportType, typeInfo);
+         ExporterCacheManager.FamilySymbolToTypeInfoCache.Register(typeKey, typeInfo, false);
 
          XYZ scaledMapOrigin = XYZ.Zero;
          Transform scaledTrf = originalTrf.Multiply(typeInfo.StyleTransform);
@@ -274,7 +280,7 @@ namespace Revit.IFC.Export.Exporter
             {
                string instanceGUID = GUIDUtil.CreateGUID(element);
 
-               bool isChildInContainer = element.AssemblyInstanceId != ElementId.InvalidElementId;
+               bool isChildInContainer = ExporterUtil.IsContainedInAssembly(element);
 
                if (IFCAnyHandleUtil.IsNullOrHasNoValue(instanceHandle))
                {
@@ -295,7 +301,7 @@ namespace Revit.IFC.Export.Exporter
                   else
                   {
                      instanceHandle = IFCInstanceExporter.CreateBuildingElementProxy(exporterIFC, element, instanceGUID,
-                        ownerHistory, localPlacementToUse, repHnd, exportType.ValidatedPredefinedType);
+                        ownerHistory, localPlacementToUse, repHnd, exportType.GetPredefinedTypeOrDefault());
                   }
 
                   bool associateToLevel = !containedInSpace && !isChildInContainer;
@@ -317,7 +323,7 @@ namespace Revit.IFC.Export.Exporter
                   {
                      // Create material association for the instance only if the the istance geometry is different from the type
                      // or the type does not have any material association
-                     IFCAnyHandle constituentSetHnd = ExporterCacheManager.MaterialSetCache.FindConstituentSetHnd(symbolId);
+                     IFCAnyHandle constituentSetHnd = ExporterCacheManager.MaterialConstituentSetCache.Find(symbolId);
                      if (IFCAnyHandleUtil.IsNullOrHasNoValue(constituentSetHnd)
                         && bodyData != null && bodyData.RepresentationItemInfo != null && bodyData.RepresentationItemInfo.Count > 0)
                      {
@@ -349,8 +355,7 @@ namespace Revit.IFC.Export.Exporter
       public static bool ExportElement(ExporterIFC exporterIFC,
          Element element, GeometryElement geometryElement, ProductWrapper productWrapper)
       {
-         string ifcEnumType;
-         IFCExportInfoPair exportType = ExporterUtil.GetProductExportType(exporterIFC, element, out ifcEnumType);
+         IFCExportInfoPair exportType = ExporterUtil.GetProductExportType(exporterIFC, element, out _);
 
          // Check the intended IFC entity or type name is in the exclude list specified in the UI
          IFCEntityType elementClassTypeEnum;
@@ -364,7 +369,7 @@ namespace Revit.IFC.Export.Exporter
             return true;
 
          if (FamilyInstanceExporter.ExportGenericToSpecificElement(exporterIFC,
-            element, ref geometryElement, exportType, ifcEnumType, productWrapper))
+            element, ref geometryElement, exportType, productWrapper))
             return true;
 
          return (ExportSimpleGenericElement(exporterIFC, element, geometryElement, productWrapper, 

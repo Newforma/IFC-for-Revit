@@ -278,8 +278,7 @@ namespace Revit.IFC.Export.Exporter
       private static IFCAnyHandle CreateCircleBasedProfileDefIfPossible(ExporterIFC exporterIFC, string profileName, CurveLoop curveLoop, Transform lcs,
           XYZ projDir)
       {
-         IList<CurveLoop> curveLoops = new List<CurveLoop>();
-         curveLoops.Add(curveLoop);
+         IList<CurveLoop> curveLoops = new List<CurveLoop>() { curveLoop };
          return CreateCircleBasedProfileDefIfPossible(exporterIFC, profileName, curveLoops, lcs, projDir);
       }
 
@@ -334,58 +333,24 @@ namespace Revit.IFC.Export.Exporter
 
          if (ExporterCacheManager.ExportOptionsCache.ExportAs4ReferenceView)
          {
-            XYZ xDir = lcs.BasisX;
-            XYZ yDir = lcs.BasisY;
-            XYZ zDir = lcs.BasisZ;
-            XYZ orig = lcs.Origin;
-
-            ctr -= orig;
-
-            IList<double> newCtr = new List<double>();
-            newCtr.Add(UnitUtil.ScaleLength(xDir.DotProduct(ctr)));
-            newCtr.Add(UnitUtil.ScaleLength(yDir.DotProduct(ctr)));
-            newCtr.Add(UnitUtil.ScaleLength(zDir.DotProduct(ctr)));
-
-            IFCAnyHandle location = IFCInstanceExporter.CreateCartesianPoint(file, newCtr);
-
             XYZ projDirToUse = projDir;
-            XYZ refDirToUse = new XYZ(1.0, 0.0, 0.0);
             if (curveLoops[0].HasPlane())
             {
                projDirToUse = curveLoops[0].GetPlane().Normal;
-               refDirToUse = curveLoops[0].GetPlane().XVec;
             }
-
-            IList<double> axisDir = new List<double>();
-            axisDir.Add(projDirToUse.X);
-            axisDir.Add(projDirToUse.Y);
-            axisDir.Add(projDirToUse.Z);
-            IFCAnyHandle axisDirectionOpt = ExporterUtil.CreateDirection(file, axisDir);
-
-            IList<double> refDir = new List<double>();
-            refDir.Add(1.0);
-            refDir.Add(0.0);
-            refDir.Add(0.0);
-            IFCAnyHandle refDirectionOpt = ExporterUtil.CreateDirection(file, refDirToUse);
-
-            IFCAnyHandle defPosition = IFCInstanceExporter.CreateAxis2Placement3D(file, location, axisDirectionOpt, refDirectionOpt);
 
             IFCAnyHandle outerCurve = GeometryUtil.CreateIFCCurveFromCurveLoop(exporterIFC, curveLoops[0], lcs, projDirToUse);
-            //if (MathUtil.IsAlmostZero(innerRadius))
             if (numLoops == 1)
-               return IFCInstanceExporter.CreateArbitraryClosedProfileDef(file, IFCProfileType.Area, profileName, outerCurve);
-            else
             {
-               IFCAnyHandle innerCurve = GeometryUtil.CreateIFCCurveFromCurveLoop(exporterIFC, curveLoops[1], lcs, projDirToUse);
-               HashSet<IFCAnyHandle> innerCurves = new HashSet<IFCAnyHandle>();
-               innerCurves.Add(innerCurve);
-               return IFCInstanceExporter.CreateArbitraryProfileDefWithVoids(file, IFCProfileType.Area, profileName, outerCurve, innerCurves);
+               return IFCInstanceExporter.CreateArbitraryClosedProfileDef(file, IFCProfileType.Area, profileName, outerCurve);
             }
+
+            IFCAnyHandle innerCurve = GeometryUtil.CreateIFCCurveFromCurveLoop(exporterIFC, curveLoops[1], lcs, projDirToUse);
+            HashSet<IFCAnyHandle> innerCurves = new HashSet<IFCAnyHandle>() { innerCurve };
+            return IFCInstanceExporter.CreateArbitraryProfileDefWithVoids(file, IFCProfileType.Area, profileName, outerCurve, innerCurves);
          }
          else
          {
-            IList<Arc> arcs = new List<Arc>();
-
             if (numLoops == 2)
             {
                XYZ checkCtr;
@@ -404,23 +369,25 @@ namespace Revit.IFC.Export.Exporter
 
             ctr -= orig;
 
-            IList<double> newCtr = new List<double>();
-            newCtr.Add(UnitUtil.ScaleLength(xDir.DotProduct(ctr)));
-            newCtr.Add(UnitUtil.ScaleLength(yDir.DotProduct(ctr)));
+            IList<double> newCtr = new List<double>()
+            {
+               UnitUtil.ScaleLength(xDir.DotProduct(ctr)),
+               UnitUtil.ScaleLength(yDir.DotProduct(ctr))
+            };
 
             IFCAnyHandle location = IFCInstanceExporter.CreateCartesianPoint(file, newCtr);
 
-            IList<double> refDir = new List<double>();
-            refDir.Add(1.0);
-            refDir.Add(0.0);
+            IList<double> refDir = new List<double>() { 1.0, 0.0 };
             IFCAnyHandle refDirectionOpt = ExporterUtil.CreateDirection(file, refDir);
 
             IFCAnyHandle defPosition = IFCInstanceExporter.CreateAxis2Placement2D(file, location, null, refDirectionOpt);
 
             if (MathUtil.IsAlmostZero(innerRadius))
+            {
                return IFCInstanceExporter.CreateCircleProfileDef(file, IFCProfileType.Area, profileName, defPosition, radius);
-            else
-               return IFCInstanceExporter.CreateCircleHollowProfileDef(file, IFCProfileType.Area, profileName, defPosition, radius, radius - innerRadius);
+            }
+
+            return IFCInstanceExporter.CreateCircleHollowProfileDef(file, IFCProfileType.Area, profileName, defPosition, radius, radius - innerRadius);
          }
       }
 
@@ -723,17 +690,22 @@ namespace Revit.IFC.Export.Exporter
              overallWidth, overallDepth, webThickness, flangeThickness, filletRadius);
       }
 
+      /// <summary>
+      /// Check to see if a curve loop is oriented clockwise.
+      /// </summary>
+      /// <param name="curveLoop">The curve loop to check.</param>
+      /// <param name="dir">The direction to compare against.</param>
       /// <returns>true if the curve loop is clockwise, false otherwise.</returns>
-      private static bool SafeIsCurveLoopClockwise(CurveLoop curveLoop, XYZ dir)
+      private static bool? SafeIsCurveLoopClockwise(CurveLoop curveLoop, XYZ dir)
       {
          if (curveLoop == null)
-            return false;
+            return null;
 
          if (curveLoop.IsOpen())
-            return false;
+            return null;
 
          if ((curveLoop.Count() == 1) && !(curveLoop.First().IsBound))
-            return false;
+            return null;
 
          return !curveLoop.IsCounterclockwise(dir);
       }
@@ -745,7 +717,7 @@ namespace Revit.IFC.Export.Exporter
       /// <param name="extrDir">Extrusion direction</param>
       /// <param name="lcs">Output parameter for the "corrected" LCS</param>
       /// <returns>True if the LCS is set</returns>
-      private static bool CorrectCurveLoopOrientation(IList<CurveLoop> curveLoops, XYZ extrDir, out Transform lcs)
+      public static bool CorrectCurveLoopOrientation(IList<CurveLoop> curveLoops, XYZ extrDir, out Transform lcs)
       {
          lcs = null;
          int loopSz = curveLoops.Count;
@@ -773,8 +745,10 @@ namespace Revit.IFC.Export.Exporter
             }
             else if (firstCurve)
             {
-               if (SafeIsCurveLoopClockwise(curveLoop, extrDir))
+               if (SafeIsCurveLoopClockwise(curveLoop, extrDir).GetValueOrDefault(false))
+               {
                   curveLoop.Flip();
+               }
 
                try
                {
@@ -790,8 +764,10 @@ namespace Revit.IFC.Export.Exporter
             }
             else
             {
-               if (!SafeIsCurveLoopClockwise(curveLoop, extrDir))
+               if (!SafeIsCurveLoopClockwise(curveLoop, extrDir).GetValueOrDefault(true))
+               {
                   curveLoop.Flip();
+               }
             }
 
             firstCurve = false;
@@ -931,9 +907,10 @@ namespace Revit.IFC.Export.Exporter
       /// The allowExportingOnlyOuterLoop is generally false, as its initial scope is intended for use with rooms, areas, and spaces.
       /// It could be extended with appropriate testing.</remarks> 
       public static IFCAnyHandle CreateExtrudedSolidFromCurveLoop(ExporterIFC exporterIFC, string profileName, IList<CurveLoop> origCurveLoops,
-          Transform lcs, XYZ extrDirVec, double scaledExtrusionSize, bool allowExportingOnlyOuterLoop)
+          Transform lcs, XYZ extrDirVec, double scaledExtrusionSize, bool allowExportingOnlyOuterLoop, out IList<CurveLoop> curveLoops)
       {
          IFCAnyHandle extrudedSolidHnd = null;
+         curveLoops = null;
 
          if (scaledExtrusionSize < MathUtil.Eps())
             return extrudedSolidHnd;
@@ -956,7 +933,7 @@ namespace Revit.IFC.Export.Exporter
             return extrudedSolidHnd;
 
          // Reduce the number of line segments in the curveloops from highly tessellated polylines, if applicable.
-         IList<CurveLoop> curveLoops = CoarsenCurveLoops(origCurveLoops);
+         curveLoops = CoarsenCurveLoops(origCurveLoops);
          if (curveLoops == null)
             return extrudedSolidHnd;
 
@@ -1068,9 +1045,8 @@ namespace Revit.IFC.Export.Exporter
                {
                   if (isCCW)
                      curveLoop.Flip();
-                  IFCAnyHandle innerCurve = GeometryUtil.CreateIFCCurveFromCurveLoop(exporterIFC, curveLoop, lcs, sweptDirection);
-                  if (!IFCAnyHandleUtil.IsNullOrHasNoValue(innerCurve))
-                     innerCurves.Add(innerCurve);
+                  innerCurves.AddIfNotNull(GeometryUtil.CreateIFCCurveFromCurveLoop(
+                     exporterIFC, curveLoop, lcs, sweptDirection));
                }
             }
 
@@ -1112,7 +1088,7 @@ namespace Revit.IFC.Export.Exporter
                }
 
                IFCAnyHandle extrudedSolid = CreateExtrudedSolidFromCurveLoop(exporterIFC, profileName, extrusionLoops,
-                   lcs, extrusionDir, extrusionSize, false);
+                   lcs, extrusionDir, extrusionSize, false, out _);
                return extrudedSolid;
             }
          }
@@ -1166,7 +1142,7 @@ namespace Revit.IFC.Export.Exporter
       /// <param name="creationData">The extrusion creation data.</param>
       /// <param name="from">The extrusion data.</param>
       /// <param name="curveLoop">The curve loop.</param>
-      public static void AddOpeningData(IFCExtrusionCreationData creationData, IFCExtrusionData from, CurveLoop curveLoop)
+      public static void AddOpeningData(IFCExportBodyParams creationData, IFCExtrusionData from, CurveLoop curveLoop)
       {
          List<CurveLoop> curveLoops = new List<CurveLoop>();
          curveLoops.Add(curveLoop);
@@ -1178,7 +1154,7 @@ namespace Revit.IFC.Export.Exporter
       /// </summary>
       /// <param name="creationData">The extrusion creation data.</param>
       /// <param name="from">The extrusion data.</param>
-      public static void AddOpeningData(IFCExtrusionCreationData creationData, IFCExtrusionData from)
+      public static void AddOpeningData(IFCExportBodyParams creationData, IFCExtrusionData from)
       {
          AddOpeningData(creationData, from, from.GetLoops());
       }
@@ -1189,7 +1165,7 @@ namespace Revit.IFC.Export.Exporter
       /// <param name="creationData">The extrusion creation data.</param>
       /// <param name="from">The extrusion data.</param>
       /// <param name="curveLoops">The curve loops.</param>
-      public static void AddOpeningData(IFCExtrusionCreationData creationData, IFCExtrusionData from, ICollection<CurveLoop> curveLoops)
+      public static void AddOpeningData(IFCExportBodyParams creationData, IFCExtrusionData from, ICollection<CurveLoop> curveLoops)
       {
          IFCExtrusionData newData = new IFCExtrusionData();
          foreach (CurveLoop curveLoop in curveLoops)
@@ -1202,16 +1178,16 @@ namespace Revit.IFC.Export.Exporter
       }
 
       /// <summary>
-      /// Generates an IFCExtrusionCreationData from ExtrusionAnalyzer results
+      /// Generates an IFCExportBodyParams from ExtrusionAnalyzer results
       /// </summary>
       /// <remarks>This will be used to populate certain property sets.</remarks>
       /// <param name="exporterIFC">The exporter.</param>
       /// <param name="projDir">The projection direction of the extrusion.</param>
       /// <param name="analyzer">The extrusion analyzer.</param>
-      /// <returns>The IFCExtrusionCreationData information.</returns>
-      public static IFCExtrusionCreationData GetExtrusionCreationDataFromAnalyzer(XYZ projDir, ExtrusionAnalyzer analyzer)
+      /// <returns>The IFCExportBodyParams information.</returns>
+      public static IFCExportBodyParams GetExtrusionCreationDataFromAnalyzer(XYZ projDir, ExtrusionAnalyzer analyzer)
       {
-         IFCExtrusionCreationData exportBodyParams = new IFCExtrusionCreationData();
+         IFCExportBodyParams exportBodyParams = new IFCExportBodyParams();
 
          XYZ extrusionDirection = analyzer.ExtrusionDirection;
 
@@ -1234,7 +1210,7 @@ namespace Revit.IFC.Export.Exporter
             return null;
 
          double height = 0.0, width = 0.0;
-         if (GeometryUtil.ComputeHeightWidthOfCurveLoop(boundaries[0], out height, out width))
+         if (GeometryUtil.ComputeHeightWidthOfCurveLoop(boundaries[0], (XYZ)null, out height, out width))
          {
             exportBodyParams.ScaledHeight = UnitUtil.ScaleLength(height);
             exportBodyParams.ScaledWidth = UnitUtil.ScaleLength(width);
@@ -1347,7 +1323,7 @@ namespace Revit.IFC.Export.Exporter
 
                if (currRetVal != null && currRetVal.Handle != null)
                {
-                  extraClippingData.MaterialIds.Union(currentExtraClippingData.MaterialIds);
+                  extraClippingData.MaterialIds = extraClippingData.MaterialIds.Union(currentExtraClippingData.MaterialIds).ToList();
                   IFCAnyHandle repHandle = currRetVal.Handle;
                   if (extraClippingData.HasBooleanResult) // if both have boolean and clipping result, use boolean one.
                      extrusionBooleanBodyItems.Add(repHandle);
@@ -1392,14 +1368,14 @@ namespace Revit.IFC.Export.Exporter
                   retVal.BaseRepresentationItems.Add(currRetVal.BaseRepresentationItems[0]);
             }
 
-            IFCAnyHandle contextOfItemsBody = exporterIFC.Get3DContextHandle("Body");
+            IFCAnyHandle contextOfItemsBody = ExporterCacheManager.Get3DContextHandle(IFCRepresentationIdentifier.Body);
 
             if (extrusionBodyItems.Count > 0 && (extrusionClippingBodyItems.Count == 0 && extrusionBooleanBodyItems.Count == 0))
             {
                if ((addInfo & GenerateAdditionalInfo.GenerateBody) != 0)
                {
                   retVal.Handle = RepresentationUtil.CreateSweptSolidRep(exporterIFC, element, catId, contextOfItemsBody,
-                     extrusionBodyItems, null);
+                     extrusionBodyItems, null, null);
                   retVal.ShapeRepresentationType = ShapeRepresentationType.SweptSolid;
                }
             }
@@ -1429,7 +1405,7 @@ namespace Revit.IFC.Export.Exporter
                   // If both Clipping and extrusion exist, they will become boolean body Union
                   ICollection<IFCAnyHandle> booleanBodyItems = extrusionClippingBodyItems.Union<IFCAnyHandle>(extrusionBooleanBodyItems).ToList();
                   extrusionBodyItems.UnionWith(booleanBodyItems);
-                  retVal.Handle = RepresentationUtil.CreateSweptSolidRep(exporterIFC, element, catId, contextOfItemsBody, extrusionBodyItems, null);
+                  retVal.Handle = RepresentationUtil.CreateSweptSolidRep(exporterIFC, element, catId, contextOfItemsBody, extrusionBodyItems, null, null);
                   retVal.ShapeRepresentationType = ShapeRepresentationType.SweptSolid;
                }
             }
@@ -1516,13 +1492,13 @@ namespace Revit.IFC.Export.Exporter
             {
                // For creating the actual extrusion, we want to use the calculated extrusion plane, not the input plane.
                IFCAnyHandle extrusionBodyItemHnd = ExtrusionExporter.CreateExtrudedSolidFromCurveLoop(exporterIFC, profileName,
-                   extrusionBoundaryLoops, extrusionBaseLCS, projDir, scaledExtrusionDepth, false);
+                   extrusionBoundaryLoops, extrusionBaseLCS, projDir, scaledExtrusionDepth, false, out _);
                if (!IFCAnyHandleUtil.IsNullOrHasNoValue(extrusionBodyItemHnd))
                {
                   if ((addInfo & GenerateAdditionalInfo.GenerateBody) != 0)
                      retVal.BaseRepresentationItems.Add(extrusionBodyItemHnd);
 
-                  if (ExporterCacheManager.ExportOptionsCache.ExportAs4)
+                  if (!ExporterCacheManager.ExportOptionsCache.ExportAsOlderThanIFC4)
                   {
                      if ((addInfo & GenerateAdditionalInfo.GenerateFootprint) != 0)
                      {
@@ -1602,8 +1578,9 @@ namespace Revit.IFC.Export.Exporter
                      // allowMultipleClipPlanes is based on category, as determined in AllowMultipleClipPlanesForCategory.  Default is true.
                      Element cuttingElement = document.GetElement(elementCutoutsForElement.Key);
                      bool allowMultipleClipPlanes = true;
-                     if (cuttingElement != null && cuttingElement.Category != null)
-                        AllowMultipleClipPlanesForCategory(cuttingElement.Category.Id);
+                     ElementId cuttingElementCategoryId = CategoryUtil.GetSafeCategoryId(cuttingElement);
+                     if (cuttingElementCategoryId != ElementId.InvalidElementId)
+                        AllowMultipleClipPlanesForCategory(cuttingElementCategoryId);
 
                      foreach (ICollection<Face> elementCutout in elementCutoutsForElement.Value)
                      {
@@ -1765,11 +1742,12 @@ namespace Revit.IFC.Export.Exporter
          ExporterIFC exporterIFC, Element element, bool isVoid, ElementId catId,
           Solid solid, Plane basePlane, XYZ planeOrigin, XYZ projDir, IFCRange range, 
           out ExtraClippingData extraClippingData,
-          out FootPrintInfo footPrintInfo, out MaterialAndProfile materialAndProfile,
+          out FootPrintInfo footPrintInfo, out MaterialAndProfile materialAndProfile, out IFCExportBodyParams extrusionData,
           GenerateAdditionalInfo addInfo = GenerateAdditionalInfo.GenerateBody, string profileName = null)
       {
          footPrintInfo = null;
          materialAndProfile = null;
+         extrusionData = null;
          IList<Solid> solids = new List<Solid>();
          solids.Add(solid);
          HandleAndAnalyzer handleAndAnalyzer = CreateExtrusionWithClippingBase(exporterIFC, element, isVoid,
@@ -1783,6 +1761,9 @@ namespace Revit.IFC.Export.Exporter
          {
             materialAndProfile = handleAndAnalyzer.MaterialAndProfile;
          }
+
+         if (handleAndAnalyzer.Analyzer != null)
+            extrusionData = GetExtrusionCreationDataFromAnalyzer(projDir, handleAndAnalyzer.Analyzer);
 
          return handleAndAnalyzer.Handle;
       }
@@ -1805,7 +1786,7 @@ namespace Revit.IFC.Export.Exporter
       public static IFCAnyHandle CreateExtrusionWithClipping(ExporterIFC exporterIFC, Element element, 
          ElementId catId, bool isVoid, IList<Solid> solids, 
          Plane basePlane, XYZ planeOrigin, XYZ projDir, IFCRange range, out ExtraClippingData extraClippingData,
-         out FootPrintInfo footPrintInfo, out MaterialAndProfile materialAndProfile, out IFCExtrusionCreationData extrusionData,
+         out FootPrintInfo footPrintInfo, out MaterialAndProfile materialAndProfile, out IFCExportBodyParams extrusionData,
          GenerateAdditionalInfo addInfo = GenerateAdditionalInfo.GenerateBody, string profileName = null)
       {
          footPrintInfo = null;
@@ -1877,27 +1858,28 @@ namespace Revit.IFC.Export.Exporter
       /// <param name="sweptCurve">The handle of the created curve entity.</param>
       /// <returns>The extrusion handle.</returns>
       /// <remarks>Note that scaledExtrusionSize and unscaledBaseHeight are in potentially different scaling units.</remarks>
-      public static IFCAnyHandle CreateSurfaceOfLinearExtrusionFromCurve(ExporterIFC exporterIFC, Curve baseCurve, Transform extrusionLCS,
-          double scaledExtrusionSize, double unscaledBaseHeight, out IFCAnyHandle curveHandle)
+      public static IFCAnyHandle CreateSurfaceOfLinearExtrusionFromCurve(ExporterIFC exporterIFC, 
+         Curve baseCurve, Transform extrusionLCS, double scaledExtrusionSize, 
+         double unscaledBaseHeight, out IFCAnyHandle curveHandle)
       {
          curveHandle = null;
 
          IFCFile file = exporterIFC.GetFile();
 
          XYZ extrusionDir = extrusionLCS.BasisZ;
-         IList<IFCAnyHandle> profileCurves = null;
+         IList<IFCAnyHandle> profileCurves;
 
          // A list of IfcCurve entities.
          if (ExporterCacheManager.ExportOptionsCache.ExportAs4ReferenceView)
          {
-            IFCAnyHandle curveHnd = GeometryUtil.CreatePolyCurveFromCurve(exporterIFC, baseCurve, extrusionLCS, extrusionDir);
             profileCurves = new List<IFCAnyHandle>();
-            if (!IFCAnyHandleUtil.IsNullOrHasNoValue(curveHnd))
-               profileCurves.Add(curveHnd);
+            profileCurves.AddIfNotNull(GeometryUtil.CreatePolyCurveFromCurve(exporterIFC, 
+               baseCurve, extrusionLCS, extrusionDir));
          }
          else
          {
-            IFCGeometryInfo info = IFCGeometryInfo.CreateCurveGeometryInfo(exporterIFC, extrusionLCS, extrusionDir, true);
+            IFCGeometryInfo info = IFCGeometryInfo.CreateCurveGeometryInfo(exporterIFC, 
+               extrusionLCS, extrusionDir, true);
             ExporterIFCUtils.CollectGeometryInfo(exporterIFC, info, baseCurve, XYZ.Zero, true);
 
             profileCurves = info.GetCurves();
@@ -1933,9 +1915,8 @@ namespace Revit.IFC.Export.Exporter
       {
          IFCFile file = exporterIFC.GetFile();
 
-         IFCAnyHandle sweptCurve;
-         IFCAnyHandle surfOnRelatingElement = CreateSurfaceOfLinearExtrusionFromCurve(exporterIFC, baseCurve, extrusionLCS,
-             scaledExtrusionSize, unscaledBaseHeight, out sweptCurve);
+         IFCAnyHandle surfOnRelatingElement = CreateSurfaceOfLinearExtrusionFromCurve(exporterIFC, 
+            baseCurve, extrusionLCS, scaledExtrusionSize, unscaledBaseHeight, out _);
 
          return IFCInstanceExporter.CreateConnectionSurfaceGeometry(file, surfOnRelatingElement, null);
       }

@@ -35,7 +35,7 @@ namespace Revit.IFC.Export.Exporter.PropertySet.Calculators
       /// <summary>
       /// A boolean variable to keep the calculated value.
       /// </summary>
-      private bool IsExternal { get; set; } = false;
+      private bool? IsExternal { get; set; } = false;
 
       /// <summary>
       /// The IsExternalCalculator instance.
@@ -46,13 +46,17 @@ namespace Revit.IFC.Export.Exporter.PropertySet.Calculators
       /// Calculates external value for an element.
       /// </summary>
       /// <param name="exporterIFC">The ExporterIFC object.</param>
-      /// <param name="extrusionCreationData">The IFCExtrusionCreationData.</param>
+      /// <param name="extrusionCreationData">The IFCExportBodyParams.</param>
       /// <param name="element">The element to calculate the value.</param>
       /// <param name="elementType">The element type.</param>
       /// <returns>True if the operation succeed, false otherwise.</returns>
-      public override bool Calculate(ExporterIFC exporterIFC, IFCExtrusionCreationData extrusionCreationData, Element element, ElementType elementType, EntryMap entryMap)
+      public override bool Calculate(ExporterIFC exporterIFC, IFCExportBodyParams extrusionCreationData, Element element, ElementType elementType, EntryMap entryMap)
       {
          IsExternal = CategoryUtil.IsElementExternal(element);
+
+         if (IsExternal == null)
+            return false;
+
          return true;
       }
 
@@ -62,7 +66,7 @@ namespace Revit.IFC.Export.Exporter.PropertySet.Calculators
       /// <returns>The boolean value.</returns>
       public override bool GetBooleanValue()
       {
-         return IsExternal;
+         return IsExternal ?? false;
       }
    }
 }

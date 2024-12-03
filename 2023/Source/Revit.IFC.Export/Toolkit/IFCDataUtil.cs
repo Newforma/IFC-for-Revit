@@ -21,8 +21,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.IFC;
 using Revit.IFC.Common.Utility;
+using Revit.IFC.Export.Exporter.PropertySet;
+using Revit.IFC.Export.Utility;
 
 namespace Revit.IFC.Export.Toolkit
 {
@@ -57,7 +60,7 @@ namespace Revit.IFC.Export.Toolkit
          if (value == null)
             return null;
 
-         if(value.Length > IFCLimits.MAX_IFCLABEL_STR_LEN)
+         if (value.Length > IFCLimits.MAX_IFCLABEL_STR_LEN)
          {
             OnIFCStringTooLongWarn(value, IFCLimits.MAX_IFCLABEL_STR_LEN);
             value = value.Remove(IFCLimits.MAX_IFCLABEL_STR_LEN);
@@ -139,7 +142,7 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsReal(double value)
       {
-         return CreateAsMeasure(value, "IfcReal");
+         return CreateAsMeasureWithUnit(value, "IfcReal");
       }
 
       /// <summary>
@@ -149,7 +152,7 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsNumeric(double value)
       {
-         return CreateAsMeasure(value, "IfcNumericMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcNumericMeasure");
       }
 
       /// <summary>
@@ -159,7 +162,7 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsRatioMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcRatioMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcRatioMeasure");
       }
 
       /// <summary>
@@ -169,7 +172,7 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsNormalisedRatioMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcNormalisedRatioMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcNormalisedRatioMeasure");
       }
 
       /// <summary>
@@ -179,7 +182,7 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsSpecularExponent(double value)
       {
-         return CreateAsMeasure(value, "IfcSpecularExponent");
+         return CreateAsMeasureWithUnit(value, "IfcSpecularExponent");
       }
 
       /// <summary>
@@ -189,7 +192,7 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsPositiveRatioMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcPositiveRatioMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcPositiveRatioMeasure");
       }
 
       /// <summary>
@@ -199,7 +202,7 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsLengthMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcLengthMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcLengthMeasure");
       }
 
       /// <summary>
@@ -209,7 +212,7 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsVolumeMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcVolumeMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcVolumeMeasure");
       }
 
       /// <summary>
@@ -219,7 +222,10 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsPositiveLengthMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcPositiveLengthMeasure");
+         if (value > MathUtil.Eps())
+            return CreateAsMeasureWithUnit(value, "IfcPositiveLengthMeasure");
+         else
+            return null;
       }
 
       /// <summary>
@@ -229,7 +235,10 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsPositivePlaneAngleMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcPositivePlaneAngleMeasure");
+         if (value > MathUtil.Eps())
+            return CreateAsMeasureWithUnit(value, "IfcPositivePlaneAngleMeasure");
+         else
+            return null;
       }
 
       /// <summary>
@@ -239,7 +248,7 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsPlaneAngleMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcPlaneAngleMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcPlaneAngleMeasure");
       }
 
       /// <summary>
@@ -249,7 +258,133 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsAreaMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcAreaMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcAreaMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcAccelerationMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsAccelerationMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcAccelerationMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcEnergyMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsEnergyMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcEnergyMeasure");
+      }
+
+
+      /// <summary>
+      /// Creates corresponding ifc unit for a measure name
+      /// </summary>
+      public static void CreateCorrespondingUnit(string measureName)
+      {
+         ForgeTypeId specType = UnitMappingUtil.GetUnitSpecTypeFromString(measureName);
+         UnitMappingUtil.GetOrCreateUnitInfo(specType);
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as an IfcMeasure of the right type
+      /// and creates the corresponding Revit unit.
+      /// </summary>
+      /// <param name="value">The int value.</param>
+      /// <param name="measureName">The type of IfcMeasure (e.g. IfcForceMeasure).</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsMeasureWithUnit(int value, string measureName)
+      {
+         CreateCorrespondingUnit(measureName);
+         return CreateAsMeasure(value, measureName);
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as an IfcMeasure of the right type
+      /// and creates the corresponding Revit unit.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <param name="measureName">The type of IfcMeasure (e.g. IfcForceMeasure).</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsMeasureWithUnit(double value, string measureName)
+      {
+         CreateCorrespondingUnit(measureName);
+         return CreateAsMeasure(value, measureName);
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcLinearMomentMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsLinearMomentMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcLinearMomentMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcMassPerLengthMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsMassPerLengthMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcMassPerLengthMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcTorqueMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsTorqueMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcTorqueMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcLinearStiffnessMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsLinearStiffnessMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcLinearStiffnessMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcAngularVelocityMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsAngularVelocityMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcAngularVelocityMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcThermalResistanceMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsThermalResistanceMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcThermalResistanceMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcWarpingConstantMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsWarpingConstantMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcWarpingConstantMeasure");
       }
 
       /// <summary>
@@ -259,17 +394,27 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsLinearVelocityMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcLinearVelocityMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcLinearVelocityMeasure");
       }
 
       /// <summary>
       /// Creates an IFCData object as IfcCountMeasure.
       /// </summary>
-      /// <param name="value">The integer value.</param>
+      /// <param name="value">The double value.</param>
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsCountMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcCountMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcCountMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcCountMeasure. Since IFC4x3 the Count measure value has been changed to Integer
+      /// </summary>
+      /// <param name="value">The integer value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsCountMeasure(int value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcCountMeasure");
       }
 
       /// <summary>
@@ -279,7 +424,7 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsParameterValue(double value)
       {
-         return CreateAsMeasure(value, "IfcParameterValue");
+         return CreateAsMeasureWithUnit(value, "IfcParameterValue");
       }
 
       /// <summary>
@@ -289,7 +434,7 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsPowerMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcPowerMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcPowerMeasure");
       }
 
       /// <summary>
@@ -299,7 +444,7 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsSoundPowerMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcSoundPowerMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcSoundPowerMeasure");
       }
 
       /// <summary>
@@ -309,7 +454,7 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsSoundPressureMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcSoundPressureMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcSoundPressureMeasure");
       }
 
       /// <summary>
@@ -319,27 +464,27 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsFrequencyMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcFrequencyMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcFrequencyMeasure");
       }
 
       /// <summary>
-      /// Creates an IFCData object as IfcElectricalCurrentMeasure.
+      /// Creates an IFCData object as IfcElectricCurrentMeasure.
       /// </summary>
       /// <param name="value">The double value.</param>
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsElectricCurrentMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcElectricCurrentMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcElectricCurrentMeasure");
       }
 
       /// <summary>
-      /// Creates an IFCData object as IfcElectricalVoltageMeasure.
+      /// Creates an IFCData object as IfcElectricVoltageMeasure.
       /// </summary>
       /// <param name="value">The double value.</param>
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsElectricVoltageMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcElectricVoltageMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcElectricVoltageMeasure");
       }
 
       /// <summary>
@@ -349,8 +494,189 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsThermodynamicTemperatureMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcThermodynamicTemperatureMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcThermodynamicTemperatureMeasure");
       }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcDynamicViscosityMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsDynamicViscosityMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcDynamicViscosityMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcIsothermalMoistureCapacityMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsIsothermalMoistureCapacityMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcIsothermalMoistureCapacityMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcMassDensityMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsMassDensityMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcMassDensityMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcModulusOfElasticityMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsModulusOfElasticityMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcModulusOfElasticityMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcVaporPermeabilityMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsVaporPermeabilityMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcVaporPermeabilityMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcThermalExpansionCoefficientMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsThermalExpansionCoefficientMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcThermalExpansionCoefficientMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcPressureMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsPressureMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcPressureMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcMonetaryMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsMonetaryMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcMonetaryMeasure");
+      }
+      
+      /// <summary>
+      /// Creates an IFCData object as IfcSpecificHeatCapacityMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsSpecificHeatCapacityMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcSpecificHeatCapacityMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcHeatingValueMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsHeatingValueMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcHeatingValueMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcMoistureDiffusivityMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsMoistureDiffusivityMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcMoistureDiffusivityMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcIonConcentrationMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsIonConcentrationMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcIonConcentrationMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcMomentOfInertiaMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsMomentOfInertiaMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcMomentOfInertiaMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcHeatFluxDensityMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsHeatFluxDensityMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcHeatFluxDensityMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcAreaDensityMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsAreaDensityMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcAreaDensityMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcThermalConductivityMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsThermalConductivityMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcThermalConductivityMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcRotationalFrequencyMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsRotationalFrequencyMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcRotationalFrequencyMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcMassFlowRateMeasure.
+      /// </summary>
+      /// <param name="value">The double value.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsMassFlowRateMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcMassFlowRateMeasure");
+      }
+      
 
       /// <summary>
       /// Creates an IFCData object as IfcThermalTransmittanceMeasure.
@@ -359,7 +685,68 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsThermalTransmittanceMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcThermalTransmittanceMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcThermalTransmittanceMeasure");
+      }
+
+      /// <summary>
+      /// Create a positive ratio measure data from value.
+      /// </summary>
+      /// <param name="value">The value of the property.</param>
+      /// <returns>The created property data.</returns>
+      public static IFCData CreatePositiveRatioMeasureData(double value)
+      {
+         return CreateRatioMeasureDataCommon(value, PropertyType.PositiveRatio);
+      }
+
+      /// <summary>
+      /// Create a ratio measure data from value.
+      /// </summary>
+      /// <param name="value">The value of the property.</param>
+      /// <returns>The created property data.</returns>
+      public static IFCData CreateRatioMeasureData(double value)
+      {
+         return CreateRatioMeasureDataCommon(value, PropertyType.Ratio);
+      }
+
+      /// <summary>
+      /// Create a normalised ratio measure data from value.
+      /// </summary>
+      /// <param name="value">The value of the property.</param>
+      /// <returns>The created property data.</returns>
+      public static IFCData CreateNormalisedRatioMeasureData(double value)
+      {
+         return CreateRatioMeasureDataCommon(value, PropertyType.NormalisedRatio);
+      }
+
+      public static IFCData CreateRatioMeasureDataCommon(double value, PropertyType propertyType)
+      {
+         IFCData ratioData = null;
+         switch (propertyType)
+         {
+            case PropertyType.PositiveRatio:
+               {
+                  if (value < MathUtil.Eps())
+                     return null;
+
+                  ratioData = CreateAsPositiveRatioMeasure(value);
+                  break;
+               }
+            case PropertyType.NormalisedRatio:
+               {
+                  if (value < -MathUtil.Eps() || value > 1.0 + MathUtil.Eps())
+                     return null;
+
+                  ratioData = CreateAsNormalisedRatioMeasure(value);
+                  break;
+               }
+            default:
+               {
+                  ratioData = CreateAsRatioMeasure(value);
+                  break;
+               }
+         }
+
+         return ratioData;
       }
 
       /// <summary>
@@ -369,7 +756,7 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsVolumetricFlowRateMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcVolumetricFlowRateMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcVolumetricFlowRateMeasure");
       }
 
       /// <summary>
@@ -379,7 +766,7 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsIlluminanceMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcIlluminanceMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcIlluminanceMeasure");
       }
 
       /// <summary>
@@ -389,7 +776,7 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsLuminousFluxMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcLuminousFluxMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcLuminousFluxMeasure");
       }
 
       /// <summary>
@@ -399,7 +786,7 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsLuminousIntensityMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcLuminousIntensityMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcLuminousIntensityMeasure");
       }
 
       /// <summary>
@@ -409,7 +796,7 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>The IFCData object.</returns>
       public static IFCData CreateAsForceMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcForceMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcForceMeasure");
       }
 
       /// <summary>
@@ -419,7 +806,27 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>the IFCData object</returns>
       public static IFCData CreateAsLinearForceMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcLinearForceMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcLinearForceMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcMassMeasure
+      /// </summary>
+      /// <param name="value">the double value</param>
+      /// <returns>the IFCData object</returns>
+      public static IFCData CreateAsMassMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcMassMeasure");
+      }
+
+      /// <summary>
+      /// Creates an IFCData object as IfcTimeMeasure
+      /// </summary>
+      /// <param name="value">the double value</param>
+      /// <returns>the IFCData object</returns>
+      public static IFCData CreateAsTimeMeasure(double value)
+      {
+         return CreateAsMeasureWithUnit(value, "IfcTimeMeasure");
       }
 
       /// <summary>
@@ -429,7 +836,7 @@ namespace Revit.IFC.Export.Toolkit
       /// <returns>the IFCData object</returns>
       public static IFCData CreateAsPlanarForceMeasure(double value)
       {
-         return CreateAsMeasure(value, "IfcPlanarForceMeasure");
+         return CreateAsMeasureWithUnit(value, "IfcPlanarForceMeasure");
       }
 
       /// <summary>
@@ -442,5 +849,377 @@ namespace Revit.IFC.Export.Toolkit
       {
          return IFCData.CreateDoubleOfType(value, type);
       }
+
+      /// <summary>
+      /// Creates an IFCData object as an IfcMeasure of the right type. The value type for Count Measure is changed to Integer from IFC4x3 onward
+      /// </summary>
+      /// <param name="value">The integer value.</param>
+      /// <param name="type">The type of IfcMeasure (e.g. IfcForceMeasure).</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateAsMeasure(int value, string type)
+      {
+         return IFCData.CreateIntegerOfType(value, type);
+      }
+
+
+      public static string ValidateEnumeratedValue(string value, Type propertyEnumerationType)
+      {
+         if (propertyEnumerationType != null && propertyEnumerationType.IsEnum && !string.IsNullOrEmpty(value))
+         {
+            foreach (object enumeratedValue in Enum.GetValues(propertyEnumerationType))
+            {
+               string enumValue = enumeratedValue.ToString();
+               if (NamingUtil.IsEqualIgnoringCaseSpacesAndUnderscores(value, enumValue))
+               {
+                  return enumValue;
+               }
+            }
+         }
+
+         return null;
+      }
+
+
+      /// <summary>
+      /// Creates an ThermodynamicTemperature IFCData object from element parameter by name
+      /// </summary>
+      /// <param name="element">The element.</param>
+      /// <param name="parameterName">The parameter name.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateThermodynamicTemperatureMeasureFromElement(Element element, string parameterName)
+      {
+         IFCData data = null;
+         Parameter param = ParameterUtil.GetDoubleValueFromElement(element, parameterName, out double propertyValue);
+         if (param != null)
+         {
+            if (!ParameterUtil.ParameterDataTypeIsEqualTo(param, SpecTypeId.Number))
+               propertyValue = UnitUtil.ScaleThermodynamicTemperature(propertyValue);
+            data = CreateAsThermodynamicTemperatureMeasure(propertyValue);
+         }
+         return data;
+      }
+
+      /// <summary>
+      /// Creates an DynamicViscosity IFCData object from element parameter by name
+      /// </summary>
+      /// <param name="element">The element.</param>
+      /// <param name="parameterName">The parameter name.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateDynamicViscosityMeasureFromElement(Element element, string parameterName)
+      {
+         IFCData data = null;
+         Parameter param = ParameterUtil.GetDoubleValueFromElement(element, parameterName, out double propertyValue);
+         if (param != null)
+         {
+            if (!ParameterUtil.ParameterDataTypeIsEqualTo(param, SpecTypeId.Number))
+               propertyValue = UnitUtil.ScaleDynamicViscosity(propertyValue);
+            data = CreateAsDynamicViscosityMeasure(propertyValue);
+         }
+         return data;
+      }
+
+      /// <summary>
+      /// Creates an HeatingValue IFCData object from element parameter by name
+      /// </summary>
+      /// <param name="element">The element.</param>
+      /// <param name="parameterName">The parameter name.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateHeatingValueMeasureFromElement(Element element, string parameterName)
+      {
+         IFCData data = null;
+         Parameter param = ParameterUtil.GetDoubleValueFromElement(element, parameterName, out double propertyValue);
+         if (param != null)
+         {
+            if (!ParameterUtil.ParameterDataTypeIsEqualTo(param, SpecTypeId.Number))
+               propertyValue = UnitUtil.ScaleHeatingValue(propertyValue);
+            data = CreateAsHeatingValueMeasure(propertyValue);
+         }
+         return data;
+      }
+
+      /// <summary>
+      /// Creates an IsothermalMoistureCapacity IFCData object from element parameter by name
+      /// </summary>
+      /// <param name="element">The element.</param>
+      /// <param name="parameterName">The parameter name.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateIsothermalMoistureCapacityMeasureFromElement(Element element, string parameterName)
+      {
+         IFCData data = null;
+         Parameter param = ParameterUtil.GetDoubleValueFromElement(element, parameterName, out double propertyValue);
+         if (param != null)
+         {
+            if (!ParameterUtil.ParameterDataTypeIsEqualTo(param, SpecTypeId.Number))
+               propertyValue = UnitUtil.ScaleIsothermalMoistureCapacity(propertyValue);
+            data = CreateAsIsothermalMoistureCapacityMeasure(propertyValue);
+         }
+         return data;
+      }
+
+      /// <summary>
+      /// Creates an PositiveLength IFCData object from element parameter by name
+      /// </summary>
+      /// <param name="element">The element.</param>
+      /// <param name="parameterName">The parameter name.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreatePositiveLengthMeasureFromElement(Element element, string parameterName)
+      {
+         IFCData data = null;
+         Parameter param = ParameterUtil.GetDoubleValueFromElement(element, parameterName, out double propertyValue);
+         if (param != null)
+         {
+            if (!ParameterUtil.ParameterDataTypeIsEqualTo(param, SpecTypeId.Number))
+               propertyValue = UnitUtil.ScaleLength(propertyValue);
+            data = CreateAsPositiveLengthMeasure(propertyValue);
+         }
+         return data;
+      }
+
+      /// <summary>
+      /// Creates an Ratio IFCData object from element parameter by name
+      /// </summary>
+      /// <param name="element">The element.</param>
+      /// <param name="parameterName">The parameter name.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateRatioMeasureFromElement(Element element, string parameterName, PropertyType propertyType)
+      {
+         IFCData data = null;
+         Parameter param = ParameterUtil.GetDoubleValueFromElement(element, parameterName, out double propertyValue);
+         if (param != null)
+         {
+            data = CreateRatioMeasureDataCommon(propertyValue, propertyType);
+         }
+         return data;
+      }
+
+      /// <summary>
+      /// Creates an MassDensity IFCData object from element parameter by name
+      /// </summary>
+      /// <param name="element">The element.</param>
+      /// <param name="parameterName">The parameter name.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateMassDensityMeasureFromElement(Element element, string parameterName)
+      {
+         IFCData data = null;
+         Parameter param = ParameterUtil.GetDoubleValueFromElement(element, parameterName, out double propertyValue);
+         if (param != null)
+         {
+            if (!ParameterUtil.ParameterDataTypeIsEqualTo(param, SpecTypeId.Number))
+               propertyValue = UnitUtil.ScaleMassDensity(propertyValue);
+            data = CreateAsMassDensityMeasure(propertyValue);
+         }
+         return data;
+      }
+
+      /// <summary>
+      /// Creates an ModulusOfElasticity IFCData object from element parameter by name
+      /// </summary>
+      /// <param name="element">The element.</param>
+      /// <param name="parameterName">The parameter name.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateModulusOfElasticityMeasureFromElement(Element element, string parameterName)
+      {
+         IFCData data = null;
+         Parameter param = ParameterUtil.GetDoubleValueFromElement(element, parameterName, out double propertyValue);
+         if (param != null)
+         {
+            if (!ParameterUtil.ParameterDataTypeIsEqualTo(param, SpecTypeId.Number))
+               propertyValue = UnitUtil.ScaleModulusOfElasticity(propertyValue);
+            data = CreateAsModulusOfElasticityMeasure(propertyValue);
+         }
+         return data;
+      }
+
+      /// <summary>
+      /// Creates an MoistureDiffusivity IFCData object from element parameter by name
+      /// </summary>
+      /// <param name="element">The element.</param>
+      /// <param name="parameterName">The parameter name.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateMoistureDiffusivityMeasureFromElement(Element element, string parameterName)
+      {
+         IFCData data = null;
+         Parameter param = ParameterUtil.GetDoubleValueFromElement(element, parameterName, out double propertyValue);
+         if (param != null)
+         {
+            if (!ParameterUtil.ParameterDataTypeIsEqualTo(param, SpecTypeId.Number))
+               propertyValue = UnitUtil.ScaleMoistureDiffusivity(propertyValue);
+            data = CreateAsMoistureDiffusivityMeasure(propertyValue);
+         }
+         return data;
+      }
+
+      /// <summary>
+      /// Creates an IonConcentration IFCData object from element parameter by name
+      /// </summary>
+      /// <param name="element">The element.</param>
+      /// <param name="parameterName">The parameter name.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateIonConcentrationMeasureFromElement(Element element, string parameterName)
+      {
+         IFCData data = null;
+         Parameter param = ParameterUtil.GetDoubleValueFromElement(element, parameterName, out double propertyValue);
+         if (param != null)
+         {
+            if (!ParameterUtil.ParameterDataTypeIsEqualTo(param, SpecTypeId.Number))
+               propertyValue = UnitUtil.ScaleIonConcentration(propertyValue);
+            data = CreateAsIonConcentrationMeasure(propertyValue);
+         }
+         return data;
+      }
+
+      /// <summary>
+      /// Creates an VaporPermeability IFCData object from element parameter by name
+      /// </summary>
+      /// <param name="element">The element.</param>
+      /// <param name="parameterName">The parameter name.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateVaporPermeabilityMeasureFromElement(Element element, string parameterName)
+      {
+         IFCData data = null;
+         Parameter param = ParameterUtil.GetDoubleValueFromElement(element, parameterName, out double propertyValue);
+         if (param != null)
+         {
+            if (!ParameterUtil.ParameterDataTypeIsEqualTo(param, SpecTypeId.Number))
+               propertyValue = UnitUtil.ScaleVaporPermeability(propertyValue);
+            data = CreateAsVaporPermeabilityMeasure(propertyValue);
+         }
+         return data;
+      }
+
+      /// <summary>
+      /// Creates an ThermalExpansionCoefficient IFCData object from element parameter by name
+      /// </summary>
+      /// <param name="element">The element.</param>
+      /// <param name="parameterName">The parameter name.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateThermalExpansionCoefficientMeasureFromElement(Element element, string parameterName)
+      {
+         IFCData data = null;
+         Parameter param = ParameterUtil.GetDoubleValueFromElement(element, parameterName, out double propertyValue);
+         if (param != null)
+         {
+            if (!ParameterUtil.ParameterDataTypeIsEqualTo(param, SpecTypeId.Number))
+               propertyValue = UnitUtil.ScaleThermalExpansionCoefficient(propertyValue);
+            data = CreateAsThermalExpansionCoefficientMeasure(propertyValue);
+         }
+         return data;
+      }
+
+      /// <summary>
+      /// Creates an Pressure IFCData object from element parameter by name
+      /// </summary>
+      /// <param name="element">The element.</param>
+      /// <param name="parameterName">The parameter name.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreatePressureMeasureFromElement(Element element, string parameterName)
+      {
+         IFCData data = null;
+         Parameter param = ParameterUtil.GetDoubleValueFromElement(element, parameterName, out double propertyValue);
+         if (param != null)
+         {
+            if (!ParameterUtil.ParameterDataTypeIsEqualTo(param, SpecTypeId.Number))
+               propertyValue = UnitUtil.ScalePressure(propertyValue);
+            data = CreateAsPressureMeasure(propertyValue);
+         }
+         return data;
+      }
+
+      /// <summary>
+      /// Creates an SpecificHeatCapacity IFCData object from element parameter by name
+      /// </summary>
+      /// <param name="element">The element.</param>
+      /// <param name="parameterName">The parameter name.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateSpecificHeatCapacityMeasureFromElement(Element element, string parameterName)
+      {
+         IFCData data = null;
+         Parameter param = ParameterUtil.GetDoubleValueFromElement(element, parameterName, out double propertyValue);
+         if (param != null)
+         {
+            if (!ParameterUtil.ParameterDataTypeIsEqualTo(param, SpecTypeId.Number))
+               propertyValue = UnitUtil.ScaleSpecificHeatCapacity(propertyValue);
+            data = CreateAsSpecificHeatCapacityMeasure(propertyValue);
+         }
+         return data;
+      }
+
+      /// <summary>
+      /// Creates an ThermalConductivity IFCData object from element parameter by name
+      /// </summary>
+      /// <param name="element">The element.</param>
+      /// <param name="parameterName">The parameter name.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateThermalConductivityMeasureFromElement(Element element, string parameterName)
+      {
+         IFCData data = null;
+         Parameter param = ParameterUtil.GetDoubleValueFromElement(element, parameterName, out double propertyValue);
+         if (param != null)
+         {
+            if (!ParameterUtil.ParameterDataTypeIsEqualTo(param, SpecTypeId.Number))
+               propertyValue = UnitUtil.ScaleThermalConductivity(propertyValue);
+            data = CreateAsThermalConductivityMeasure(propertyValue);
+         }
+         return data;
+      }
+
+      /// <summary>
+      /// Creates an Text IFCData object from element parameter by name
+      /// </summary>
+      /// <param name="element">The element.</param>
+      /// <param name="parameterName">The parameter name.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateTextFromElement(Element element, string parameterName)
+      {
+         IFCData data = null;
+         Parameter param = ParameterUtil.GetStringValueFromElement(element, parameterName, out string propertyValue);
+         if (param != null)
+            data = CreateAsText(propertyValue);
+         return data;
+      }
+
+      /// <summary>
+      /// Creates an Boolean IFCData object from element parameter by name
+      /// </summary>
+      /// <param name="element">The element.</param>
+      /// <param name="parameterName">The parameter name.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateBooleanFromElement(Element element, string parameterName)
+      {
+         IFCData data = null;
+         Parameter param = ParameterUtil.GetIntValueFromElement(element, parameterName, out int propertyValue);
+         if (param != null)
+            data = CreateAsBoolean(propertyValue != 0);         
+         return data;
+      }
+
+      /// <summary>
+      /// Creates an Label IFCData object from element parameter by name
+      /// </summary>
+      /// <param name="element">The element.</param>
+      /// <param name="parameterName">The parameter name.</param>
+      /// <returns>The IFCData object.</returns>
+      public static IFCData CreateLabelFromElement(Element element, string parameterName, PropertyValueType valueType, Type propertyEnumerationType)
+      {
+         IFCData data = null;
+         if (ParameterUtil.GetStringValueFromElement(element, parameterName, out string propertyValue) != null)
+         {
+            if (!string.IsNullOrEmpty(propertyValue))
+            {
+               if (valueType == PropertyValueType.EnumeratedValue)
+               {
+                  propertyValue = ValidateEnumeratedValue(propertyValue, propertyEnumerationType);
+                  data = IFCData.CreateEnumeration(propertyValue);
+               }
+               else
+               {
+                  data = CreateAsLabel(propertyValue);
+               }
+            }
+         }
+         return data;
+      }
+
+
    }
 }

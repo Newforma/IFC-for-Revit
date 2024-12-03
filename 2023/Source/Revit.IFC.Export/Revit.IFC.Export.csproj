@@ -86,6 +86,7 @@
     <Compile Include="Exporter\HostedSweepExporter.cs" />
     <Compile Include="Exporter\HostObjectExporter.cs" />
     <Compile Include="Exporter\IFCEntityAndPsetList.cs" />
+    <Compile Include="Exporter\IFCExportBodyParams.cs" />
     <Compile Include="Exporter\InsulationExporter.cs" />
     <Compile Include="Exporter\PartExporter.cs" />
     <Compile Include="Exporter\PileExporter.cs" />
@@ -152,14 +153,14 @@
     <Compile Include="Exporter\PropertySet\Calculators\WaistThicknessCalculator.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\WalkingLineOffsetCalculator.cs" />
     <Compile Include="Exporter\PropertySet\ClassificationUtil.cs" />
-    <Compile Include="Exporter\PropertySet\ElectricalCurrentPropertyUtil.cs" />
-    <Compile Include="Exporter\PropertySet\ElectricalVoltagePropertyUtil.cs" />
     <Compile Include="Exporter\PropertySet\EntryMap.cs" />
     <Compile Include="Exporter\PropertySet\ExporterInitializer_PsetDefIFC2X2Enum.cs" />
     <Compile Include="Exporter\PropertySet\ExporterInitializer_PsetDefIFC2X3Enum.cs" />
     <Compile Include="Exporter\PropertySet\ExporterInitializer_PsetDefIFC4Enum.cs" />
-    <Compile Include="Exporter\PropertySet\FrequencyPropertyUtil.cs" />
-    <Compile Include="Exporter\PropertySet\PositivePlaneAnglePropertyUtil.cs" />
+    <Compile Include="Exporter\PropertySet\ExporterInitializer_PsetDefIFC4X3Enum.cs" />
+    <Compile Include="Exporter\PropertySet\PreDefinedPropertySetDescription.cs" />
+    <Compile Include="Exporter\PropertySet\PreDefinedPropertySetEntry.cs" />
+    <Compile Include="Exporter\PropertySet\PreDefinedPropertySetEntryMap.cs" />
     <Compile Include="Exporter\PropertySet\PropertySetDescription.cs" />
     <Compile Include="Exporter\PropertySet\PropertySetEntry.cs" />
     <Compile Include="Exporter\PropertySet\PropertySetEntryMap.cs" />
@@ -201,6 +202,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="Toolkit\IFC4x3Enums.cs" />
     <Compile Include="Toolkit\IFCValidateEntry.cs" />
     <Compile Include="Toolkit\IFC4Enums.cs" />
     <Compile Include="Toolkit\IFCEnums.cs" />
@@ -218,7 +220,6 @@
     <Compile Include="Utility\ClassificationLocationCache.cs" />
     <Compile Include="Utility\ClassificationCache.cs" />
     <Compile Include="Utility\ContainmentCache.cs" />
-    <Compile Include="Utility\ClassificationReferenceCache.cs" />
     <Compile Include="Utility\CurveAnnotationCache.cs" />
     <Compile Include="Exporter\FamilyInstanceExporter.cs" />
     <Compile Include="Exporter\PropertySet\Description.cs" />
@@ -259,11 +260,13 @@
     <Compile Include="Utility\IntegerPropertyInfoCache.cs" />
     <Compile Include="Utility\LevelInfoCache.cs" />
     <Compile Include="Utility\LevelUtil.cs" />
+    <Compile Include="Utility\LinkedFileExportAs.cs" />
     <Compile Include="Utility\LogicalPropertyInfoCache.cs" />
     <Compile Include="Utility\MaterialAndProfile.cs" />
     <Compile Include="Utility\MaterialConstituentCache.cs" />
     <Compile Include="Utility\MaterialConstituentSetCache.cs" />
     <Compile Include="Utility\MaterialLayerSetInfo.cs" />
+    <Compile Include="Utility\MaterialPropertiesUtil.cs" />
     <Compile Include="Utility\MaterialSetUsageCache.cs" />
     <Compile Include="Utility\MEPCache.cs" />
     <Compile Include="Utility\NamingOptions.cs" />
@@ -280,6 +283,7 @@
     <Compile Include="Utility\ProductWrapper.cs" />
     <Compile Include="Utility\PropertyInfoCache.cs" />
     <Compile Include="Utility\PropertyMap.cs" />
+    <Compile Include="Utility\PropertySetCache.cs" />
     <Compile Include="Utility\PropertySetOptions.cs" />
     <Compile Include="Utility\RepresentationUtil.cs" />
     <Compile Include="Utility\SimpleSweptSolidAnalyzer.cs" />
@@ -292,6 +296,7 @@
     <Compile Include="Utility\SystemsCache.cs" />
     <Compile Include="Utility\TriangleMergeUtil.cs" />
     <Compile Include="Utility\TypePropertyInfoCache.cs" />
+    <Compile Include="Utility\UnitMappingUtil.cs" />
     <Compile Include="Utility\UnitsCache.cs" />
     <Compile Include="Utility\UnitUtil.cs" />
     <Compile Include="Utility\WallConnectionDataCache.cs" />
@@ -360,10 +365,10 @@
       <Version>4.6.6</Version>
     </PackageReference>
     <PackageReference Include="BIMOne.Autodesk.Revit2023.RevitAPI">
-      <Version>23.0.1.318</Version>
+      <Version>23.1.60.36</Version>
     </PackageReference>
     <PackageReference Include="BIMOne.Autodesk.Revit2023.RevitAPIIFC">
-      <Version>23.0.1.318</Version>
+      <Version>23.1.60.36</Version>
     </PackageReference>
     <PackageReference Include="GeometryGymIFC">
       <Version>0.0.20</Version>
@@ -384,7 +389,7 @@
     about missing OutputPath tags.
     -->
   <Import Project=".\Revit.IFC.Export.props" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
   </Target>

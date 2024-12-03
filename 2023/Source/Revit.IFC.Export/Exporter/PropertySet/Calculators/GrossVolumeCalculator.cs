@@ -17,6 +17,7 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //
 
+using System.Collections.Generic;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.IFC;
 using Revit.IFC.Export.Utility;
@@ -38,25 +39,27 @@ namespace Revit.IFC.Export.Exporter.PropertySet.Calculators
       /// The SlabGrossVolumeCalculator instance.
       /// </summary>
       public static GrossVolumeCalculator Instance { get; } = new GrossVolumeCalculator();
-      
+
       /// <summary>
       /// Calculates gross volume.
       /// </summary>
       /// <param name="exporterIFC">The ExporterIFC object.</param>
-      /// <param name="extrusionCreationData">The IFCExtrusionCreationData.</param>
+      /// <param name="extrusionCreationData">The IFCExportBodyParams.</param>
       /// <param name="element">The element to calculate the value.</param>
       /// <param name="elementType">The element type.</param>
       /// <returns>True if the operation succeeded, false otherwise.</returns>
-      public override bool Calculate(ExporterIFC exporterIFC, IFCExtrusionCreationData extrusionCreationData, Element element, ElementType elementType, EntryMap entryMap)
+      public override bool Calculate(ExporterIFC exporterIFC, IFCExportBodyParams extrusionCreationData, Element element, ElementType elementType, EntryMap entryMap)
       {
-         if ((ParameterUtil.GetDoubleValueFromElementOrSymbol(element, entryMap.RevitParameterName, out m_Volume) != null)
-               || (ParameterUtil.GetDoubleValueFromElementOrSymbol(element, entryMap.CompatibleRevitParameterName, out m_Volume) != null)
-               || (ParameterUtil.GetDoubleValueFromElementOrSymbol(element, "IfcQtyGrossVolume", out m_Volume) != null))
+         if (ParameterUtil.GetDoubleValueFromElementOrSymbol(element, entryMap.RevitParameterName, out m_Volume, entryMap.CompatibleRevitParameterName, "IfcQtyGrossVolume") != null)
          {
             m_Volume = UnitUtil.ScaleVolume(m_Volume);
             if (m_Volume > MathUtil.Eps() * MathUtil.Eps() * MathUtil.Eps())
                return true;
          }
+
+         m_Volume = UnitUtil.ScaleVolume(CalculateSpatialElementGrossVolume(element as SpatialElement, extrusionCreationData));
+         if (m_Volume > MathUtil.Eps() * MathUtil.Eps() * MathUtil.Eps())
+            return true;
 
          if (extrusionCreationData == null)
             return false;
@@ -68,6 +71,47 @@ namespace Revit.IFC.Export.Exporter.PropertySet.Calculators
          double length = UnitUtil.UnscaleLength(extrusionCreationData.ScaledLength);
          m_Volume = UnitUtil.ScaleVolume(area * length);
          return (m_Volume > MathUtil.Eps() * MathUtil.Eps() * MathUtil.Eps());
+      }
+
+      private double CalculateSpatialElementGrossVolume(SpatialElement spatialElement, IFCExportBodyParams extrusionCreationData)
+      {
+         double area = 0.0;
+
+         if (spatialElement == null || extrusionCreationData == null)
+            return area;
+
+         // Get the outer boundary loops of the SpatialElement.
+         IList<IList<BoundarySegment>> boundaryLoops = spatialElement.GetBoundarySegments(new SpatialElementBoundaryOptions());
+
+         //Search for a outer loop with the largest area.
+         foreach (IList<BoundarySegment> boundaryLoop in boundaryLoops)
+         {
+            CurveLoop curveLoop = new CurveLoop();
+            foreach (BoundarySegment boundarySegment in boundaryLoop)
+            {
+               try
+               {
+                  Curve curve = boundarySegment.GetCurve();
+                  curveLoop.Append(curve);
+               }
+               catch (Autodesk.Revit.Exceptions.ArgumentException)
+               {
+                  //For some special cases, BoundarySegments of the element are not valid for CurveLoop creation
+                  //(curveLoop.Append(curve) throws exception because "This curve will make the loop discontinuous.") 
+
+                  return 0.0;
+               }
+            }
+
+            double loopArea = ExporterIFCUtils.ComputeAreaOfCurveLoops(new List<CurveLoop>() { curveLoop });
+
+            if (area < loopArea)
+               area = loopArea;
+         }
+
+         double length = UnitUtil.UnscaleLength(extrusionCreationData.ScaledLength);
+
+         return area * length;
       }
 
       /// <summary>

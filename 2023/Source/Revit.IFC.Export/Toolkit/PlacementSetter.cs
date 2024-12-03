@@ -339,7 +339,7 @@ namespace Revit.IFC.Export.Toolkit
          {
             // the cache contains levels from all the exported documents
             // if the export is performed for a linked document, filter the levels that are not from this document
-            if (ExporterCacheManager.ExportOptionsCache.ExportingLink)
+            if (ExporterCacheManager.ExportOptionsCache.ExportLinkedFileAs != LinkedFileExportAs.DontExport)
             {
                Element levelElem = document.GetElement(levelInfoPair.Key);
                if (levelElem == null || !(levelElem is Level))
@@ -486,12 +486,12 @@ namespace Revit.IFC.Export.Toolkit
                // are placed before the level, not above.  So we have made a small modification so that anything within
                // 10cm of the 'next' level is on that level.
 
-               double levelExtension = 10.0 / (12.0 * 2.54);
+               double levelExtension = LevelUtil.LevelExtension;
                foreach (KeyValuePair<ElementId, IFCLevelInfo> levelInfoPair in levelInfos)
                {
                   // the cache contains levels from all the exported documents
                   // if the export is performed for a linked document, filter the levels that are not from this document
-                  if (ExporterCacheManager.ExportOptionsCache.ExportingLink)
+                  if (ExporterCacheManager.ExportOptionsCache.ExportLinkedFileAs != LinkedFileExportAs.DontExport)
                   {
                      Element levelElem = doc.GetElement(levelInfoPair.Key);
                      if (levelElem == null || !(levelElem is Level))
@@ -528,7 +528,7 @@ namespace Revit.IFC.Export.Toolkit
             {
                // the cache contains levels from all the exported documents
                // if the export is performed for a linked document, filter the levels that are not from this document
-               if (ExporterCacheManager.ExportOptionsCache.ExportingLink)
+               if (ExporterCacheManager.ExportOptionsCache.ExportLinkedFileAs != LinkedFileExportAs.DontExport)
                {
                   Element levelElem = doc.GetElement(levelInfoPair.Key);
                   if (levelElem == null || !(levelElem is Level))

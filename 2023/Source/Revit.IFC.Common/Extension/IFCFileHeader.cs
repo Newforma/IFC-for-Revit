@@ -107,7 +107,7 @@ namespace Revit.IFC.Common.Extensions
 
             Entity mapEntity = new Entity(m_schema);
             IDictionary<string, string> mapData = new Dictionary<string, string>();
-            if (fileHeaderItem.FileDescription != null) mapData.Add(s_FileDescription, fileHeaderItem.FileDescription.ToString());
+            if (fileHeaderItem.FileDescriptions.Count > 0) mapData.Add(s_FileDescription, string.Join("|", fileHeaderItem.FileDescriptions.ToArray()));
             if (fileHeaderItem.SourceFileName != null) mapData.Add(s_SourceFileName, fileHeaderItem.SourceFileName.ToString());
             if (fileHeaderItem.AuthorName != null) mapData.Add(s_AuthorName, fileHeaderItem.AuthorName.ToString());
             if (fileHeaderItem.AuthorEmail != null) mapData.Add(s_AuthorEmail, fileHeaderItem.AuthorEmail.ToString());
@@ -149,27 +149,34 @@ namespace Revit.IFC.Common.Extensions
          if (fileHeaderStorage.Count == 0)
             return false;
 
-         // expected only one File Header information in the storage
-         Entity savedFileHeader = fileHeaderStorage[0].GetEntity(m_schema);
-         IDictionary<string, string> savedFileHeaderMap = savedFileHeader.Get<IDictionary<string, string>>(s_FileHeaderMapField);
-         if (savedFileHeaderMap.ContainsKey(s_FileDescription))
-            fileHeader.FileDescription = savedFileHeaderMap[s_FileDescription];
-         if (savedFileHeaderMap.ContainsKey(s_SourceFileName))
-            fileHeader.SourceFileName = savedFileHeaderMap[s_SourceFileName];
-         if (savedFileHeaderMap.ContainsKey(s_AuthorName))
-            fileHeader.AuthorName = savedFileHeaderMap[s_AuthorName];
-         if (savedFileHeaderMap.ContainsKey(s_AuthorEmail))
-            fileHeader.AuthorEmail = savedFileHeaderMap[s_AuthorEmail];
-         if (savedFileHeaderMap.ContainsKey(s_Organization))
-            fileHeader.Organization = savedFileHeaderMap[s_Organization];
-         if (savedFileHeaderMap.ContainsKey(s_Authorization))
-            fileHeader.Authorization = savedFileHeaderMap[s_Authorization];
-         if (savedFileHeaderMap.ContainsKey(s_ApplicationName))
-            fileHeader.ApplicationName = savedFileHeaderMap[s_ApplicationName];
-         if (savedFileHeaderMap.ContainsKey(s_VersionNumber))
-            fileHeader.VersionNumber = savedFileHeaderMap[s_VersionNumber];
-         if (savedFileHeaderMap.ContainsKey(s_FileSchema))
-            fileHeader.FileSchema = savedFileHeaderMap[s_FileSchema];
+         try
+         {
+            // expected only one File Header information in the storage
+            Entity savedFileHeader = fileHeaderStorage[0].GetEntity(m_schema);
+            IDictionary<string, string> savedFileHeaderMap = savedFileHeader.Get<IDictionary<string, string>>(s_FileHeaderMapField);
+            if (savedFileHeaderMap.ContainsKey(s_FileDescription))
+               fileHeader.FileDescriptions = savedFileHeaderMap[s_FileDescription].Split('|').ToList();
+            if (savedFileHeaderMap.ContainsKey(s_SourceFileName))
+               fileHeader.SourceFileName = savedFileHeaderMap[s_SourceFileName];
+            if (savedFileHeaderMap.ContainsKey(s_AuthorName))
+               fileHeader.AuthorName = savedFileHeaderMap[s_AuthorName];
+            if (savedFileHeaderMap.ContainsKey(s_AuthorEmail))
+               fileHeader.AuthorEmail = savedFileHeaderMap[s_AuthorEmail];
+            if (savedFileHeaderMap.ContainsKey(s_Organization))
+               fileHeader.Organization = savedFileHeaderMap[s_Organization];
+            if (savedFileHeaderMap.ContainsKey(s_Authorization))
+               fileHeader.Authorization = savedFileHeaderMap[s_Authorization];
+            if (savedFileHeaderMap.ContainsKey(s_ApplicationName))
+               fileHeader.ApplicationName = savedFileHeaderMap[s_ApplicationName];
+            if (savedFileHeaderMap.ContainsKey(s_VersionNumber))
+               fileHeader.VersionNumber = savedFileHeaderMap[s_VersionNumber];
+            if (savedFileHeaderMap.ContainsKey(s_FileSchema))
+               fileHeader.FileSchema = savedFileHeaderMap[s_FileSchema];
+         }
+         catch (Exception)
+         {
+            document.Application.WriteJournalComment("IFC error: Cannot read IFCFileHeader schema", true);
+         }
 
          return true;
       } 
