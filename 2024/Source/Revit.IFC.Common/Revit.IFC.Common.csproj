@@ -59,6 +59,8 @@
     <Compile Include="Enums\IFC2X3_TC1EntityType.cs" />
     <Compile Include="Enums\IFC2xEntityType.cs" />
     <Compile Include="Enums\IFC4EntityType.cs" />
+    <Compile Include="Enums\IFC4x1EntityType.cs" />
+    <Compile Include="Enums\IFC4x2EntityType.cs" />
     <Compile Include="Enums\IFC4x3EntityType.cs" />
     <Compile Include="Enums\IFCEntityType.cs" />
     <Compile Include="Enums\IFCKnownMVDAndER.cs" />
@@ -110,10 +112,10 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="BIMOne.Autodesk.Revit2024.RevitAPI">
-      <Version>24.0.5.432</Version>
+      <Version>24.3.10.22</Version>
     </PackageReference>
     <PackageReference Include="BIMOne.Autodesk.Revit2024.RevitAPIIFC">
-      <Version>24.0.5.432</Version>
+      <Version>24.3.10.22</Version>
     </PackageReference>
   </ItemGroup>
   <Import Project=".\Revit.IFC.Common.props" />

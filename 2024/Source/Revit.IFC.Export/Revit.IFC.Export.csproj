@@ -158,15 +158,11 @@
     <Compile Include="Exporter\PropertySet\Calculators\WaistThicknessCalculator.cs" />
     <Compile Include="Exporter\PropertySet\Calculators\WalkingLineOffsetCalculator.cs" />
     <Compile Include="Exporter\PropertySet\ClassificationUtil.cs" />
-    <Compile Include="Exporter\PropertySet\ElectricalCurrentPropertyUtil.cs" />
-    <Compile Include="Exporter\PropertySet\ElectricalVoltagePropertyUtil.cs" />
     <Compile Include="Exporter\PropertySet\EntryMap.cs" />
     <Compile Include="Exporter\PropertySet\ExporterInitializer_PsetDefIFC2X2Enum.cs" />
     <Compile Include="Exporter\PropertySet\ExporterInitializer_PsetDefIFC2X3Enum.cs" />
     <Compile Include="Exporter\PropertySet\ExporterInitializer_PsetDefIFC4Enum.cs" />
     <Compile Include="Exporter\PropertySet\ExporterInitializer_PsetDefIFC4X3Enum.cs" />
-    <Compile Include="Exporter\PropertySet\FrequencyPropertyUtil.cs" />
-    <Compile Include="Exporter\PropertySet\PositivePlaneAnglePropertyUtil.cs" />
     <Compile Include="Exporter\PropertySet\PreDefinedPropertySetDescription.cs" />
     <Compile Include="Exporter\PropertySet\PreDefinedPropertySetEntry.cs" />
     <Compile Include="Exporter\PropertySet\PreDefinedPropertySetEntryMap.cs" />
@@ -305,6 +301,7 @@
     <Compile Include="Utility\SystemsCache.cs" />
     <Compile Include="Utility\TriangleMergeUtil.cs" />
     <Compile Include="Utility\TypePropertyInfoCache.cs" />
+    <Compile Include="Utility\UnitMappingUtil.cs" />
     <Compile Include="Utility\UnitsCache.cs" />
     <Compile Include="Utility\UnitUtil.cs" />
     <Compile Include="Utility\WallConnectionDataCache.cs" />
@@ -373,10 +370,10 @@
       <Version>4.6.6</Version>
     </PackageReference>
     <PackageReference Include="BIMOne.Autodesk.Revit2024.RevitAPI">
-      <Version>24.0.5.432</Version>
+      <Version>24.3.10.22</Version>
     </PackageReference>
     <PackageReference Include="BIMOne.Autodesk.Revit2024.RevitAPIIFC">
-      <Version>24.0.5.432</Version>
+      <Version>24.3.10.22</Version>
     </PackageReference>
     <PackageReference Include="GeometryGymIFC">
       <Version>0.1.22</Version>
@@ -384,6 +381,9 @@
     <PackageReference Include="Newtonsoft.Json">
       <Version>12.0.3</Version>
     </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Utility\ParamExprResolverParser.g4" />
   </ItemGroup>
   <!--
     Always Import the appropriate *.OutputPath.targets file BEFORE the
