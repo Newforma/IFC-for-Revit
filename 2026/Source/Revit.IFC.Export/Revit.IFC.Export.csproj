@@ -1,0 +1,88 @@
+﻿<Project Sdk="">
+  <PropertyGroup>
+    <RootNamespace>Revit.IFC.Export</RootNamespace>
+    <AssemblyName>BIMOne.Revit.IFC.Export</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup>
+    <Antlr4UseCSharpGenerator>True</Antlr4UseCSharpGenerator>
+    <BaseOutputPath></BaseOutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <Prefer32Bit>false</Prefer32Bit>
+    <DefineConstants>TRACE;DEBUG;IFC_OPENSOURCE</DefineConstants>
+    <PlatformTarget>x64</PlatformTarget>
+    <OutputPath>bin\Debugx64\</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <Prefer32Bit>false</Prefer32Bit>
+    <DefineConstants>TRACE;IFC_OPENSOURCE</DefineConstants>
+    <OutputPath>bin\Releasex64\</OutputPath>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <Import Project="$(SolutionDir)VSProps\Revit.CSharp.Sdk.props" />
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Revit.IFC.Common\Revit.IFC.Common.csproj">
+      <Private>False</Private>
+      <ExcludeAssets>All</ExcludeAssets>
+      <PrivateAssets>All</PrivateAssets>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Antlr4 Include="Utility\ParamExprGrammar.g4">
+      <Generator>MSBuild:Compile</Generator>
+      <CustomToolNamespace>Revit.IFC.Export.Utility</CustomToolNamespace>
+      <Listener>True</Listener>
+      <Visitor>True</Visitor>
+    </Antlr4>
+  </ItemGroup>
+  <!--
+    Always Import the appropriate *.OutputPath.targets file BEFORE the
+    Revit.CSharp.targets file, otherwise VisualStudio will complain
+    about missing OutputPath tags.
+    -->
+  <Import Project="$(SolutionDir)VSProps\Revit.CSharp.Sdk.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <ItemGroup>
+    <Compile Remove="Exporter\PropertySet\Calculators\SlabLoadBearingCalculator.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Antlr4" Version="4.6.6">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Antlr4.CodeGenerator">
+      <Version>4.6.6</Version>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Antlr4.Runtime">
+      <Version>4.6.6</Version>
+    </PackageReference>
+    <PackageReference Include="BIMOne.Autodesk.Revit2026.RevitAPI" Version="26.0.10.8" />
+    <PackageReference Include="BIMOne.Autodesk.Revit2026.RevitAPIIFC" Version="26.0.10.8" />
+    <PackageReference Include="BIMOne.Autodesk.Revit2026.RevitAPIUI" Version="26.0.10.8" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+  </ItemGroup>
+</Project>
